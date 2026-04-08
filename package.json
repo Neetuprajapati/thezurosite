@@ -1,0 +1,13 @@
+{
+  "name": "thezuro",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "cd Backend && node src/index.js",
+    "start:all": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
