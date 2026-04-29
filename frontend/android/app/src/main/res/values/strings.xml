@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TheZuro</string>
+    <string name="title_activity_main">TheZuro</string>
+    <string name="package_name">com.thezuro.app</string>
+    <string name="custom_url_scheme">com.thezuro.app</string>
+</resources>
