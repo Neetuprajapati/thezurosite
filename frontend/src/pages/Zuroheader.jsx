@@ -1,716 +1,323 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import theme from "./theme";
-import logo from "../assest/logo/thezurologo.png";  
-
-
-const API = "http://localhost:5000/api";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import logo from "../assest/logo/thezurologo.png";
 
 const SearchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 const UserIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
   </svg>
 );
-const HeartIcon = ({ filled }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? "rgb(237,128,233)" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+const HeartIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 const BagIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
     <line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
-const ChevronDown = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
 const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
   </svg>
 );
 const CloseIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
-const ChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
+const NotFoundIcon = () => (
+  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="8" y1="11" x2="14" y2="11" />
   </svg>
 );
 
-const ZuroLogo = ({ onClick }) => (
-  <div
-    onClick={onClick}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      cursor: "pointer"
-    }}
-  >
-    <img
-      src={logo}
-      alt="TheZuro"
-      style={{
-        height: 42,
-        width: "auto",
-        objectFit: "contain"
-      }}
-    />
-  </div>
-);
-
-
-// const theme = {
-//   primary: "#9400D3",
-//   accent: "#ED80E9",
-//   lightPurple: "#D3D3FF",
-//   muted: "#D8BFD8",
-//   white: "#ffffff",
-//   dark: "#1a1a2e",
-// };
-
-// ── Badge Component ──────────────────────────────────────────
-function Badge({ count, color }) {
-  if (!count || count === 0) return null;
-  return (
-    <span style={{
-      position: "absolute", top: -6, right: -8,
-      background: color || `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
-      color: "#fff", fontSize: 10, fontWeight: 700,
-      minWidth: 17, height: 17, borderRadius: "50%",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "0 3px",
-      boxShadow: "0 2px 6px rgba(148,0,211,0.4)",
-      animation: "popIn 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-    }}>
-      {count > 99 ? "99+" : count}
-    </span>
-  );
-}
-
-
-
-const megaMenus = {
-  MEN: {
-    promo: "🎉 New Arrivals in Men's Fashion — Up to 50% Off!",
-    sections: [
-      { category: "Topwear", icon: "👕", items: ["T-Shirts", "Casual Shirts", "Formal Shirts", "Sweatshirts", "Jackets & Coats", "Suits & Blazers"] },
-      { category: "Bottomwear", icon: "👖", items: ["Jeans", "Casual Trousers", "Formal Trousers", "Shorts", "Track Pants", "Joggers"] },
-      { category: "Footwear", icon: "👟", items: ["Casual Shoes", "Sports Shoes", "Formal Shoes", "Sandals & Floaters", "Flip Flops", "Boots"] },
-      { category: "Fashion Accessory", icon: "🕶️", items: ["Watches", "Sunglasses", "Belts", "Wallets", "Caps & Hats", "Ties & Cufflinks"] },
-    ],
-  },
-  WOMEN: {
-    promo: "✨ Trending Women's Collection — Flat 40% Off on New Styles!",
-    sections: [
-      { category: "Topwear", icon: "👚", items: ["Kurtas & Suits", "Tops & Tees", "Blouses", "Sweatshirts", "Jackets", "Co-ord Sets"] },
-      { category: "Bottomwear", icon: "👗", items: ["Sarees", "Lehengas", "Jeans", "Palazzos", "Skirts", "Trousers & Capris"] },
-      { category: "Footwear", icon: "👠", items: ["Heels", "Flats", "Sneakers", "Sandals", "Boots", "Wedges"] },
-      { category: "Fashion Accessory", icon: "👜", items: ["Handbags", "Earrings", "Necklaces", "Bangles & Bracelets", "Sunglasses", "Scarves & Stoles"] },
-    ],
-  },
-  KIDS: {
-    promo: "🧸 Kids' Carnival Sale — Buy 2 Get 1 Free on All Styles!",
-    sections: [
-      { category: "Topwear", icon: "🧒", items: ["T-Shirts", "Shirts", "Sweatshirts", "Dungarees", "Ethnic Wear", "Party Wear"] },
-      { category: "Bottomwear", icon: "🩳", items: ["Jeans", "Trousers", "Shorts", "Track Pants", "Skirts", "Leggings"] },
-      { category: "Footwear", icon: "👟", items: ["Casual Shoes", "Sports Shoes", "Sandals", "Flip Flops", "School Shoes", "Boots"] },
-      { category: "Fashion Accessory", icon: "🎒", items: ["Backpacks", "Hair Accessories", "Caps & Hats", "Watches", "Belts", "Socks"] },
-    ],
-  },
-  BEAUTY: {
-    promo: "💄 Glow Up Sale — Up to 60% Off on Premium Beauty Brands!",
-    sections: [
-      { category: "Lip Care", icon: "💋", items: ["Lipstick", "Lip Gloss", "Lip Balm", "Lip Liner", "Lip Plumper", "Lip Tint"] },
-      { category: "Jewellery", icon: "💍", items: ["Earrings", "Necklaces", "Rings", "Bangles", "Anklets", "Brooches"] },
-      { category: "Skin Care", icon: "🧴", items: ["Moisturizers", "Serums", "Sunscreen", "Face Wash", "Toners", "Face Masks"] },
-      { category: "Makeup", icon: "🎨", items: ["Foundation", "Mascara", "Eyeliner", "Blush", "Highlighter", "Concealer"] },
-    ],
-  },
-};
-
 const navItems = [
-  { label: "MEN", hasDropdown: true },
-  { label: "WOMEN", hasDropdown: true },
-  { label: "KIDS", hasDropdown: true },
-  { label: "HOME" },
-  { label: "BEAUTY", hasDropdown: true },
+  { label: "Shop",         path: "/home" },
+  { label: "Men",          path: "/category/men" },
+  { label: "Women",        path: "/category/women" },
+  { label: "PERFUME",      path: "/category/perfume" },
+  { label: "SHOES",        path: "/category/shoes" },
+  { label: "NEW ARRIVALS", path: "/category/new-arrivals" },
+  { label: "CONTACT US",   path: "/contact" },
 ];
 
-export default function ZuroHeader() {
-  const navigate = useNavigate();
-  const [activeNav, setActiveNav] = useState(null);
-  const [openMenu, setOpenMenu] = useState(null);
-  const [hoveredNav, setHoveredNav] = useState(null);
-  const [hoveredItem, setHoveredItem] = useState(null);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileExpanded, setMobileExpanded] = useState(null);
-  const [mobileSearch, setMobileSearch] = useState("");
-  const hideTimer = useRef(null);
+const getPrimaryImage = (media) => {
+  if (!Array.isArray(media) || !media.length) return null;
+  return (
+    media.find(m => m.is_primary && m.media_type === "image") ||
+    media.find(m => m.media_type === "image")
+  )?.media_url || null;
+};
 
-  // ── Dynamic counts ──────────────────────────────────────────
-  const [bagCount, setBagCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
+export default function LuxuryHeader() {
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const searchRef  = useRef(null);
 
-  const [user, setUser] = useState(null);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [query,         setQuery]         = useState("");
+  const [allProducts,   setAllProducts]   = useState([]);
+  const [results,       setResults]       = useState([]);
+  const [showDropdown,  setShowDropdown]  = useState(false);
+  const [searching,     setSearching]     = useState(false);
+  const [productsLoaded, setProductsLoaded] = useState(false);
 
-  // ── On mount: load user & fetch counts ─────────────────────
+  const activeNav = navItems.find(
+    item => item.path !== "/home" && location.pathname === item.path
+  )?.label ?? null;
+
+  // ── Load all products once ──────────────────────────────────
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-    if (stored && token) {
-      setUser(JSON.parse(stored));
-      fetchCounts(token);
-    }
+    fetch("http://localhost:5000/api/products")
+      .then(r => r.json())
+      .then(data => {
+        setAllProducts(Array.isArray(data) ? data : []);
+        setProductsLoaded(true);
+      })
+      .catch(() => setProductsLoaded(true));
   }, []);
 
-  // ── Expose global refresh so other pages can call it ───────
-  // e.g. after adding to bag: window.refreshHeaderCounts()
+  // ── Search logic — filter by title, brand, category ─────────
   useEffect(() => {
-    window.refreshHeaderCounts = () => {
-      const token = localStorage.getItem("token");
-      if (token) fetchCounts(token);
+    const q = query.trim().toLowerCase();
+    if (!q) { setResults([]); setShowDropdown(false); return; }
+
+    setSearching(true);
+    setShowDropdown(true);
+
+    const timer = setTimeout(() => {
+      const filtered = allProducts.filter(p =>
+        p.title?.toLowerCase().includes(q) ||
+        p.brand?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q)
+      ).slice(0, 8); // max 8 results
+      setResults(filtered);
+      setSearching(false);
+    }, 250); // debounce
+
+    return () => clearTimeout(timer);
+  }, [query, allProducts]);
+
+  // ── Close dropdown on outside click ─────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
     };
-    return () => { delete window.refreshHeaderCounts; };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const fetchCounts = async (token) => {
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
+  const handleProductClick = (id) => {
+    setQuery("");
+    setShowDropdown(false);
+    navigate(`/product/${id}`);
+  };
 
-      const [bagRes, wishRes] = await Promise.all([
-        fetch(`${API}/bag/count`, { headers }),
-        fetch(`${API}/wishlist/count`, { headers }),
-      ]);
-
-      if (bagRes.ok) {
-        const bagData = await bagRes.json();
-        setBagCount(bagData.count ?? 0);
-      }
-      if (wishRes.ok) {
-        const wishData = await wishRes.json();
-        setWishlistCount(wishData.count ?? 0);
-      }
-    } catch (err) {
-      console.log("Count fetch error:", err);
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") { setShowDropdown(false); setQuery(""); }
+    if (e.key === "Enter" && results.length > 0) {
+      handleProductClick(results[0].id);
     }
   };
 
-  // bag function here  
-  const addToCart = async (productId) => {
-    try {
-      const token = localStorage.getItem("token");
+  // ── Search box component (reused for desktop + mobile) ──────
+  const SearchBox = ({ mobile = false }) => (
+    <div ref={mobile ? null : searchRef} style={{ position: "relative", width: mobile ? "100%" : 220 }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        background: "#f8f5f2", border: "1px solid #e8ddd5",
+        borderRadius: 40, padding: "10px 16px",
+        width: "100%",
+        boxShadow: showDropdown && !mobile ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+      }}>
+        <div style={{ color: "#aaa", flexShrink: 0, display: "flex" }}><SearchIcon /></div>
+        <input
+          type="text"
+          placeholder="Search products, brands..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => query.trim() && setShowDropdown(true)}
+          onKeyDown={handleKeyDown}
+          style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 13, color: "#333", fontFamily: "Montserrat" }}
+        />
+        {query && (
+          <button onClick={() => { setQuery(""); setShowDropdown(false); }}
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#aaa", display: "flex", padding: 0 }}>
+            <CloseIcon />
+          </button>
+        )}
+      </div>
 
-      const res = await fetch("http://localhost:5000/api/bag/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ productId })
-      });
+      {/* ── DROPDOWN ── */}
+      {showDropdown && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0,
+          background: "#fff", borderRadius: 12, overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.14)", zIndex: 99999,
+          border: "1px solid #f0eae0",
+          minWidth: mobile ? "100%" : 340,
+        }}>
+          {/* Loading */}
+          {searching && (
+            <div style={{ padding: "20px", textAlign: "center", color: "#aaa", fontSize: 13, fontFamily: "Montserrat" }}>
+              Searching...
+            </div>
+          )}
 
-      const data = await res.json();
+          {/* Results */}
+          {!searching && results.length > 0 && (
+            <>
+              <div style={{ padding: "10px 16px 6px", fontSize: 10, color: "#bbb", letterSpacing: 2, textTransform: "uppercase", fontFamily: "Montserrat", fontWeight: 600 }}>
+                {results.length} result{results.length > 1 ? "s" : ""} found
+              </div>
+              {results.map(product => {
+                const imgUrl    = getPrimaryImage(product.media);
+                const salePrice = product.sale_price ?? product.base_price ?? 0;
+                return (
+                  <div key={product.id}
+                    onClick={() => handleProductClick(product.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", transition: "background 0.15s", borderBottom: "1px solid #f8f8f8" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#faf8f5"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    {/* Image */}
+                    <div style={{ width: 44, height: 44, borderRadius: 8, background: "#f5f4f0", overflow: "hidden", flexShrink: 0 }}>
+                      {imgUrl
+                        ? <img src={imgUrl} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🛍️</div>
+                      }
+                    </div>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "Montserrat" }}>
+                        {product.title}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#B8933A", marginTop: 2, fontFamily: "Montserrat" }}>
+                        {product.brand} · {product.category}
+                      </div>
+                    </div>
+                    {/* Price */}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", fontFamily: "Montserrat", flexShrink: 0 }}>
+                      ₹{salePrice.toLocaleString()}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
 
-      if (res.ok) {
-        alert("✅ Added to Bag");
-        window.refreshHeaderCounts(); // header update
-      } else {
-        alert(data.message || "❌ Failed");
-      }
-    } catch (err) {
-      console.log(err);
-      alert("Server error");
-    }
-  };
-  // ── Guard: only profile needs login check ──────────────────
-  const guardedNavigate = (path) => {
-    navigate(path); // always navigate; individual pages handle their own auth
-  };
-
-  const openDropdown = (label) => { clearTimeout(hideTimer.current); setOpenMenu(label); };
-  const closeDropdown = () => { hideTimer.current = setTimeout(() => setOpenMenu(null), 150); };
-  const closeMobile = () => { setMobileOpen(false); setMobileExpanded(null); };
+          {/* Not Found */}
+          {!searching && results.length === 0 && query.trim() && (
+            <div style={{ padding: "28px 20px", textAlign: "center" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}><NotFoundIcon /></div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#555", margin: "0 0 4px", fontFamily: "Montserrat" }}>
+                No results for "{query}"
+              </p>
+              <p style={{ fontSize: 12, color: "#bbb", margin: 0, fontFamily: "Montserrat" }}>
+                Try searching by product name, brand or category
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
       <style>{`
-        @keyframes fadeSlideDown {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideInLeft {
-          from { transform: translateX(-100%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes popIn {
-          from { transform: scale(0.5); opacity: 0; }
-          to   { transform: scale(1); opacity: 1; }
-        }
-        .desktop-nav { display: flex; }
-        .mobile-menu-btn { display: none; }
-        .mobile-search-bar { display: none; }
-
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
+        * { box-sizing: border-box; }
+        .left-nav       { display: flex; }
+        .mobile-menu    { display: none; }
+        .mobile-drawer  { display: none; }
+        .desktop-search { display: flex; }
+        @media(max-width: 1100px) {
+          .left-nav       { display: none !important; }
           .desktop-search { display: none !important; }
-          .mobile-menu-btn { display: flex !important; }
-          .mobile-search-bar { display: flex !important; }
-          .desktop-icons span { display: none; }
+          .mobile-menu    { display: flex !important; }
+          .mobile-drawer  { display: block !important; }
+          .header-wrapper { height: 70px !important; }
         }
       `}</style>
 
-      <div style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", position: "relative" }}>
+      <div style={{ width: "100%", background: "#fff", position: "sticky", top: 0, zIndex: 9999, borderBottom: "1px solid #eee", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
 
-        {/* ── MAIN HEADER BAR ── */}
-        <div style={{
-          background: theme.white,
-          borderBottom: `2px solid ${theme.lightPurple}`,
-          padding: "0 16px",
-          boxShadow: `0 2px 12px ${theme.lightPurple}88`,
-          position: "sticky", top: 0, zIndex: 9999,
-        }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", height: 64, gap: 16 }}>
+        {/* TOP BAR */}
+        <div style={{ background: "linear-gradient(135deg, #a87c2a, #c9a84c, #e8cc6e, #c9a84c, #a87c2a)", color: "#4a3200", textAlign: "center", padding: "8px 10px", fontSize: 12, fontWeight: 600, letterSpacing: 1, fontFamily: "Montserrat" }}>
+          ✨ FREE SHIPPING ON ORDERS ABOVE ₹999 ✨
+        </div>
 
-            {/* Mobile: Hamburger */}
-            <button
-              className="mobile-menu-btn"
-              onClick={() => setMobileOpen(true)}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: theme.primary, display: "none", alignItems: "center" }}
-            >
+        {/* MAIN HEADER */}
+        <div className="header-wrapper" style={{ maxWidth: 1450, margin: "0 auto", height: 86, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: "#fff" }}>
+
+          {/* LEFT */}
+          <div style={{ display: "flex", alignItems: "center", gap: 32, flex: 1 }}>
+            <button className="mobile-menu" onClick={() => setMobileOpen(true)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#333" }}>
               <MenuIcon />
             </button>
-
-            {/* Logo */}
-            <ZuroLogo onClick={() => navigate("/home")} />
-
-            {/* Desktop Nav */}
-            <nav className="desktop-nav" style={{ alignItems: "center", gap: 2 }}>
-              {navItems.map((item) => {
-                const isActive = activeNav === item.label;
-                const isHovered = hoveredNav === item.label;
-                const hasDD = item.hasDropdown;
+            <img src={logo} alt="The Zuro" onClick={() => navigate("/home")} style={{ height: 58, width: "auto", objectFit: "contain", cursor: "pointer", flexShrink: 0 }} />
+            <nav className="left-nav" style={{ alignItems: "center", gap: 28 }}>
+              {navItems.map(({ label, path }) => {
+                const active = activeNav === label;
                 return (
-                  <div
-                    key={item.label}
-                    onClick={() => { setActiveNav(item.label); if (!hasDD) setOpenMenu(null); }}
-                    onMouseEnter={() => { setHoveredNav(item.label); if (hasDD) openDropdown(item.label); else closeDropdown(); }}
-                    onMouseLeave={() => { setHoveredNav(null); if (hasDD) closeDropdown(); }}
-                    style={{
-                      position: "relative", padding: "20px 12px", cursor: "pointer",
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                      background: isHovered && !isActive ? `${theme.lightPurple}55` : "transparent",
-                      borderRadius: 6, transition: "background 0.2s",
-                    }}
-                  >
-                    <span style={{
-                      fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
-                      color: isActive ? theme.primary : theme.dark,
-                      whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4,
-                    }}>
-                      {item.label}
-                      {hasDD && (
-                        <span style={{
-                          color: isActive ? theme.primary : theme.muted,
-                          display: "flex", alignItems: "center",
-                          transform: openMenu === item.label ? "rotate(180deg)" : "rotate(0deg)",
-                          transition: "transform 0.2s",
-                        }}>
-                          <ChevronDown />
-                        </span>
-                      )}
+                  <div key={label} onClick={() => navigate(path)} style={{ position: "relative", cursor: "pointer", paddingBottom: 4 }}>
+                    <span style={{ fontSize: 12, letterSpacing: 1.3, fontWeight: active ? 700 : 600, color: active ? "rgb(184,147,58)" : "#444", fontFamily: "Montserrat", transition: "color 0.3s", whiteSpace: "nowrap" }}>
+                      {label}
                     </span>
-                    {isActive && (
-                      <div style={{
-                        position: "absolute", bottom: 0, left: 12, right: 12, height: 3,
-                        background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})`,
-                        borderRadius: "3px 3px 0 0",
-                      }} />
-                    )}
+                    {active && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgb(184,147,58)", borderRadius: 20 }} />}
                   </div>
                 );
               })}
             </nav>
-
-            {/* Desktop Search */}
-            <div className="desktop-search" style={{ flex: 1, maxWidth: 480 }}>
-              <div style={{
-                display: "flex", alignItems: "center", gap: 10,
-                background: `${theme.lightPurple}44`, borderRadius: 6, padding: "9px 16px",
-                border: searchFocused ? `1.5px solid ${theme.primary}` : `1.5px solid ${theme.muted}`,
-                transition: "border-color 0.2s",
-              }}>
-                <span style={{ color: theme.primary }}><SearchIcon /></span>
-                <input
-                  type="text"
-                  placeholder="Search for products, brands and more"
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  style={{ border: "none", background: "transparent", outline: "none", fontSize: 14, color: theme.dark, width: "100%", fontFamily: "inherit" }}
-                />
-              </div>
-            </div>
-
-            {/* ── Right Icons ── */}
-            <div className="desktop-icons" style={{ display: "flex", alignItems: "center", gap: 20, marginLeft: "auto" }}>
-
-              {/* Profile */}
-              <button
-                onClick={() => guardedNavigate("/profile")}
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 0, color: theme.primary }}
-              >
-                <div style={{ position: "relative" }}>
-                  <UserIcon />
-                  {/* Green dot if logged in */}
-                  {user && (
-                    <span style={{
-                      position: "absolute", bottom: 0, right: -1,
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: "#22c55e",
-                      border: "1.5px solid #fff",
-                    }} />
-                  )}
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: theme.dark, letterSpacing: 0.3 }}>
-                  {user ? user.full_name?.split(" ")[0] : "Profile"}
-                </span>
-              </button>
-
-              {/* Wishlist */}
-              {/* <button onClick={() => addToWishlist(product.id)}
-         
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 0, color: theme.accent, position: "relative" }}
-              >
-                
-                <div style={{ position: "relative" }}>
-                  <HeartIcon filled={wishlistCount > 0} />
-                  <Badge count={wishlistCount} color={`linear-gradient(135deg, #ff4d7d, #ff80ab)`} />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: theme.dark, letterSpacing: 0.3 }}>Wishlist</span>
-              </button> */}
-              <button
-                onClick={() => navigate("/wishlist")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 3,
-                  padding: 0,
-                  color: theme.accent,
-                  position: "relative"
-                }}
-              >
-                <div style={{ position: "relative" }}>
-                  <HeartIcon filled={wishlistCount > 0} />
-                  <Badge count={wishlistCount} color={`linear-gradient(135deg, #ff4d7d, #ff80ab)`} />
-                </div>
-
-                <span style={{ fontSize: 11, fontWeight: 600, color: theme.dark }}>
-                  Wishlist
-                </span>
-              </button>
-
-              {/* Bag */}
-              {/* <button
-                onClick={() => addToCart(product.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 0, position: "relative", color: theme.primary }}
-              >
-                <div style={{ position: "relative" }}>
-                  <BagIcon />
-                  <Badge count={bagCount} />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: theme.dark, letterSpacing: 0.3 }}>Bag</span>
-              </button> */}
-
-              {/* Bag */}
-              {/* Bag */}
-              {/* Bag */}
-              <button
-                onClick={() => navigate("/bag")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 3,
-                  padding: 0,
-                  position: "relative",
-                  color: theme.primary
-                }}
-              >
-                <div style={{ position: "relative" }}>
-                  <BagIcon />
-                  <Badge count={bagCount} />
-                </div>
-
-                <span style={{ fontSize: 11, fontWeight: 600, color: theme.dark }}>
-                  Bag
-                </span>
-              </button>
-
-            </div>
           </div>
 
-          {/* Mobile Search Bar */}
-          <div className="mobile-search-bar" style={{
-            display: "none", padding: "8px 0 10px",
-            alignItems: "center", gap: 10,
-            background: `${theme.lightPurple}44`, borderRadius: 8,
-            border: `1.5px solid ${theme.muted}`, margin: "0 0 10px",
-          }}>
-            <span style={{ color: theme.primary, paddingLeft: 12 }}><SearchIcon /></span>
-            <input
-              type="text"
-              placeholder="Search products, brands..."
-              value={mobileSearch}
-              onChange={e => setMobileSearch(e.target.value)}
-              style={{ border: "none", background: "transparent", outline: "none", fontSize: 14, color: theme.dark, width: "100%", fontFamily: "inherit" }}
-            />
+          {/* RIGHT */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+            <div className="desktop-search" ref={searchRef} style={{ position: "relative" }}>
+              <SearchBox />
+            </div>
+            <button onClick={() => navigate("/profile")} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#333" }}><UserIcon /></button>
+            <button onClick={() => navigate("/wishlist")} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#333" }}><HeartIcon /></button>
+            <button onClick={() => navigate("/bag")} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#333" }}><BagIcon /></button>
           </div>
         </div>
 
-        {/* ── DESKTOP MEGA DROPDOWN ── */}
-        {openMenu && megaMenus[openMenu] && (
-          <div
-            onMouseEnter={() => openDropdown(openMenu)}
-            onMouseLeave={closeDropdown}
-            style={{
-              position: "fixed", top: 64, left: 0, right: 0,
-              // background: theme.white,
-              borderTop: `3px solid ${theme.primary}`,
-              borderBottom: `1px solid ${theme.lightPurple}`,
-              boxShadow: `0 10px 40px rgba(148,0,211,0.15)`,
-              zIndex: 998,
-              background: "#ffffff",
-              padding: "28px 48px 32px",
-              animation: "fadeSlideDown 0.18s ease",
-            }}
-          >
-            <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32 }}>
-                {megaMenus[openMenu].sections.map((section) => (
-                  <div key={section.category}>
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      marginBottom: 14, paddingBottom: 10,
-                      borderBottom: `2px solid ${theme.lightPurple}`,
-                    }}>
-                      <span style={{ fontSize: 20 }}>{section.icon}</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: theme.primary, letterSpacing: 1, textTransform: "uppercase" }}>
-                        {section.category}
-                      </span>
-                    </div>
-                    <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                      {section.items.map((item) => (
-                        <li key={item}
-                          onMouseEnter={() => setHoveredItem(item)}
-                          onMouseLeave={() => setHoveredItem(null)}
-                          style={{
-                            fontSize: 13, padding: "8px 12px", borderRadius: 6, cursor: "pointer",
-                            color: hoveredItem === item ? theme.primary : "#555",
-                            background: hoveredItem === item ? `${theme.lightPurple}55` : "transparent",
-                            fontWeight: hoveredItem === item ? 600 : 400,
-                            borderLeft: hoveredItem === item ? `3px solid ${theme.accent}` : "3px solid transparent",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                marginTop: 24, padding: "14px 20px",
-                background: `linear-gradient(135deg, ${theme.lightPurple}66, ${theme.muted}44)`,
-                borderRadius: 10,
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-              }}>
-                <span style={{ fontSize: 13, color: theme.primary, fontWeight: 600 }}>
-                  {megaMenus[openMenu].promo}
-                </span>
-                {/* <button style={{
-                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
-                  color: "#fff", border: "none", borderRadius: 20,
-                  padding: "7px 20px", fontSize: 12, fontWeight: 700,
-                  cursor: "pointer", letterSpacing: 0.5,
-                }}>
-                  Shop Now
-                </button> */}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── MOBILE DRAWER OVERLAY ── */}
-        {mobileOpen && (
-          <div onClick={closeMobile} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000 }} />
-        )}
-
-        {/* ── MOBILE DRAWER ── */}
-        <div style={{
-          position: "fixed", top: 0, left: 0, bottom: 0,
-          width: 300, background: theme.white,
-          zIndex: 1001,
-          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease",
-          overflowY: "auto",
-          boxShadow: "4px 0 24px rgba(148,0,211,0.15)",
-        }}>
-
-          {/* Drawer Header */}
-          <div style={{
-            background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
-            padding: "20px 16px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>TheZuro</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>
-                {user ? `Hello, ${user.full_name?.split(" ")[0]} 👋` : "India's fastest growing fashion"}
-              </div>
-            </div>
-            <button onClick={closeMobile} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: "#fff", display: "flex" }}>
-              <CloseIcon />
-            </button>
+        {/* MOBILE DRAWER */}
+        <div className="mobile-drawer" style={{ position: "fixed", top: 0, left: mobileOpen ? 0 : "-100%", width: 300, height: "100vh", background: "#fff", zIndex: 999999, transition: "0.4s", boxShadow: "4px 0 30px rgba(0,0,0,0.1)" }}>
+          <div style={{ height: 70, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", borderBottom: "1px solid #eee" }}>
+            <img src={logo} alt="The Zuro" style={{ height: 40, width: "auto", objectFit: "contain" }} />
+            <button onClick={() => setMobileOpen(false)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#333" }}><CloseIcon /></button>
           </div>
 
-          {/* Mobile Search */}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.lightPurple}` }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              background: `${theme.lightPurple}44`, borderRadius: 8, padding: "9px 12px",
-              border: `1.5px solid ${theme.lightPurple}`,
-            }}>
-              <span style={{ color: theme.primary }}><SearchIcon /></span>
-              <input type="text" placeholder="Search products..." style={{ border: "none", background: "transparent", outline: "none", fontSize: 14, color: theme.dark, width: "100%", fontFamily: "inherit" }} />
-            </div>
+          {/* MOBILE SEARCH */}
+          <div style={{ padding: 20 }}>
+            <SearchBox mobile={true} />
           </div>
 
-          {/* Mobile Nav Items */}
-          <div style={{ padding: "8px 0" }}>
-            {navItems.map((item) => (
-              <div key={item.label}>
-                <div
-                  onClick={() => {
-                    if (item.hasDropdown) setMobileExpanded(mobileExpanded === item.label ? null : item.label);
-                    else closeMobile();
-                  }}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "14px 20px", cursor: "pointer",
-                    borderLeft: mobileExpanded === item.label ? `4px solid ${theme.primary}` : "4px solid transparent",
-                    background: mobileExpanded === item.label ? `${theme.lightPurple}33` : "transparent",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.5, color: mobileExpanded === item.label ? theme.primary : theme.dark }}>
-                    {item.label}
-                  </span>
-                  {item.hasDropdown && (
-                    <span style={{ color: theme.muted, display: "flex", transform: mobileExpanded === item.label ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-                      <ChevronRight />
-                    </span>
-                  )}
-                </div>
-
-                {item.hasDropdown && mobileExpanded === item.label && megaMenus[item.label] && (
-                  <div style={{ background: `${theme.lightPurple}22`, paddingBottom: 8 }}>
-                    {megaMenus[item.label].sections.map((section) => (
-                      <div key={section.category} style={{ padding: "10px 20px 4px 32px" }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: theme.primary, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                          {section.icon} {section.category}
-                        </div>
-                        {section.items.map((subItem) => (
-                          <div key={subItem} onClick={closeMobile} style={{ fontSize: 13, color: "#555", padding: "6px 0 6px 8px", cursor: "pointer", borderBottom: `1px solid ${theme.lightPurple}44` }}>
-                            {subItem}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                    <div style={{ margin: "10px 16px 4px", background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`, borderRadius: 8, padding: "10px 14px" }}>
-                      <div style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>{megaMenus[item.label].promo}</div>
-                    </div>
-                  </div>
-                )}
+          {/* MOBILE NAV */}
+          <div>
+            {navItems.map(({ label, path }) => (
+              <div key={label} onClick={() => { navigate(path); setMobileOpen(false); }}
+                style={{ padding: "18px 24px", borderBottom: "1px solid #f5f5f5", cursor: "pointer", color: activeNav === label ? "rgb(184,147,58)" : "#444", fontWeight: 600, letterSpacing: 1, fontSize: 13, fontFamily: "Montserrat" }}>
+                {label}
               </div>
             ))}
           </div>
-
-          {/* Mobile Bottom Actions */}
-          <div style={{ borderTop: `1px solid ${theme.lightPurple}`, marginTop: 8 }}>
-            {[
-              {
-                icon: <UserIcon />, label: user ? user.full_name?.split(" ")[0] || "My Profile" : "My Profile",
-                action: () => { guardedNavigate("/profile"); closeMobile(); },
-                badge: null,
-              },
-              {
-                icon: <HeartIcon filled={wishlistCount > 0} />, label: "Wishlist",
-                action: () => { guardedNavigate("/wishlist"); closeMobile(); },
-                badge: wishlistCount,
-                badgeColor: "linear-gradient(135deg, #ff4d7d, #ff80ab)",
-              },
-              {
-                icon: <BagIcon />, label: "My Bag",
-                action: () => { guardedNavigate("/bag"); closeMobile(); },
-                badge: bagCount,
-              },
-            ].map(({ icon, label, action, badge, badgeColor }) => (
-              <div key={label} onClick={action} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", cursor: "pointer", borderBottom: `1px solid ${theme.lightPurple}44` }}>
-                <span style={{ color: theme.primary, position: "relative" }}>
-                  {icon}
-                  {badge > 0 && (
-                    <span style={{
-                      position: "absolute", top: -5, right: -8,
-                      background: badgeColor || `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
-                      color: "#fff", fontSize: 9, fontWeight: 700,
-                      minWidth: 15, height: 15, borderRadius: "50%",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      padding: "0 2px",
-                    }}>
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: theme.dark }}>{label}</span>
-              </div>
-            ))}
-          </div>
-
         </div>
 
+        {mobileOpen && <div onClick={() => setMobileOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 99999 }} />}
       </div>
     </>
   );
 }
-
-<div style={{
-  background: theme.white,
-  borderBottom: `2px solid ${theme.lightPurple}`, // ✅ bottom line (already ok)
-  padding: "0 16px",
-  boxShadow: `0 2px 12px ${theme.lightPurple}88`,
-
-  // ✅ Sticky FIX (important upgrade)
-  position: "sticky",
-  top: 0,
-  zIndex: 9999,
-  backdropFilter: "blur(10px)" // optional premium feel
-}}></div>

@@ -1,281 +1,642 @@
-import { useState } from "react";
-import theme from "./theme";
-// const theme = {
-//   primary: "#9400D3",
-//   accent: "#ED80E9",
-//   lightPurple: "#D3D3FF",
-//   muted: "#D8BFD8",
-//   white: "#ffffff",
-//   dark: "#1a1a2e",
-//   bg: "#f8f4ff",
-// };
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
-const HeartIcon = ({ filled }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? theme.accent : "none"} stroke={filled ? theme.accent : "#ccc"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-  </svg>
-);
+const API = "http://localhost:5000/api";
+const getToken = () => localStorage.getItem("token");
+
 const StarIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill={theme.accent} stroke="none">
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
   </svg>
 );
-const FilterIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+const HeartIcon = ({ filled }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24"
+    fill={filled ? "#e11d48" : "none"}
+    stroke={filled ? "#e11d48" : "#fff"} strokeWidth="2">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+const BagIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 01-8 0"/>
   </svg>
 );
 
-const allProducts = [
-  { id: 1,  name: "Classic White Shirt",        brand: "Zuro Basics",   price: 799,  original: 1499, category: "MEN",    sub: "Topwear",           rating: 4.3, reviews: 234, emoji: "👔", badge: "Bestseller" },
-  { id: 2,  name: "Slim Fit Jeans",             brand: "DenimCo",       price: 1299, original: 2499, category: "MEN",    sub: "Bottomwear",        rating: 4.5, reviews: 512, emoji: "👖", badge: "New" },
-  { id: 3,  name: "Sports Running Shoes",       brand: "FlexFit",       price: 2199, original: 3999, category: "MEN",    sub: "Footwear",          rating: 4.7, reviews: 890, emoji: "👟", badge: "Hot" },
-  { id: 4,  name: "Floral Wrap Dress",          brand: "BloomWear",     price: 999,  original: 2199, category: "WOMEN",  sub: "Topwear",           rating: 4.6, reviews: 340, emoji: "👗", badge: "Trending" },
-  { id: 5,  name: "High Waist Palazzo",         brand: "StyleHub",      price: 699,  original: 1299, category: "WOMEN",  sub: "Bottomwear",        rating: 4.2, reviews: 180, emoji: "🩱", badge: "" },
-  { id: 6,  name: "Block Heel Sandals",         brand: "StepUp",        price: 1499, original: 2799, category: "WOMEN",  sub: "Footwear",          rating: 4.4, reviews: 267, emoji: "👠", badge: "New" },
-  { id: 7,  name: "Graphic Tee — Unicorn",      brand: "KidsKool",      price: 399,  original: 799,  category: "KIDS",   sub: "Topwear",           rating: 4.8, reviews: 620, emoji: "🦄", badge: "Hot" },
-  { id: 8,  name: "Cargo Shorts",               brand: "MiniStyle",     price: 499,  original: 999,  category: "KIDS",   sub: "Bottomwear",        rating: 4.1, reviews: 145, emoji: "🩳", badge: "" },
-  { id: 9,  name: "LED Light-Up Sneakers",      brand: "GlowKids",      price: 899,  original: 1799, category: "KIDS",   sub: "Footwear",          rating: 4.9, reviews: 730, emoji: "✨", badge: "Bestseller" },
-  { id: 10, name: "Matte Red Lipstick",         brand: "GlowUp",        price: 349,  original: 599,  category: "BEAUTY", sub: "Lip Care",          rating: 4.7, reviews: 920, emoji: "💄", badge: "Hot" },
-  { id: 11, name: "Rose Lip Balm SPF 30",       brand: "PureGlow",      price: 199,  original: 349,  category: "BEAUTY", sub: "Lip Care",          rating: 4.5, reviews: 480, emoji: "🌸", badge: "" },
-  { id: 12, name: "Crystal Drop Earrings",      brand: "ShineOn",       price: 599,  original: 1199, category: "BEAUTY", sub: "Jewellery",         rating: 4.6, reviews: 310, emoji: "💎", badge: "Trending" },
-  { id: 13, name: "Vitamin C Face Serum",       brand: "SkinLab",       price: 799,  original: 1499, category: "BEAUTY", sub: "Skin Care",         rating: 4.8, reviews: 660, emoji: "🧴", badge: "New" },
-  { id: 14, name: "Oversized Hoodie",           brand: "StreetZone",    price: 1199, original: 2199, category: "MEN",    sub: "Topwear",           rating: 4.6, reviews: 445, emoji: "🧥", badge: "New" },
-  { id: 15, name: "Pearl Stud Earrings",        brand: "LuxeGems",      price: 899,  original: 1799, category: "BEAUTY", sub: "Jewellery",         rating: 4.9, reviews: 540, emoji: "🦪", badge: "Bestseller" },
-  { id: 16, name: "Kurti with Embroidery",      brand: "EthnicVibes",   price: 1099, original: 2199, category: "WOMEN",  sub: "Topwear",           rating: 4.5, reviews: 388, emoji: "🪡", badge: "Trending" },
-  { id: 17, name: "Formal Oxford Shoes",        brand: "EliteStep",     price: 2499, original: 4499, category: "MEN",    sub: "Footwear",          rating: 4.4, reviews: 200, emoji: "👞", badge: "" },
-  { id: 18, name: "Tie-Dye Crop Tee",           brand: "BohoKids",      price: 449,  original: 899,  category: "KIDS",   sub: "Topwear",           rating: 4.3, reviews: 210, emoji: "🎨", badge: "" },
-];
+const sortOptions = ["Relevance", "Price: Low to High", "Price: High to Low", "Rating"];
 
-const categories = ["ALL", "MEN", "WOMEN", "KIDS", "BEAUTY"];
-const sortOptions = ["Relevance", "Price: Low to High", "Price: High to Low", "Rating", "New Arrivals"];
-
-const badgeColors = {
-  "Bestseller": { bg: "#fff7ed", color: "#ea580c" },
-  "New":        { bg: "#f0fdf4", color: "#16a34a" },
-  "Hot":        { bg: "#fef2f2", color: "#dc2626" },
-  "Trending":   { bg: "#fdf4ff", color: theme.primary },
+const getPrimaryImage = (media) => {
+  if (!Array.isArray(media) || !media.length) return null;
+  return (
+    media.find(m => m.is_primary && m.media_type === "image") ||
+    media.find(m => m.media_type === "image")
+  )?.media_url || null;
 };
 
-const banners = [
-  { title: "Summer Sale", sub: "Up to 70% off on all categories", emoji: "☀️", grad: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` },
-  { title: "New Arrivals", sub: "Fresh styles just landed", emoji: "✨", grad: "linear-gradient(135deg, #f59e0b, #ef4444)" },
-  { title: "Beauty Picks", sub: "Top rated skincare & makeup", emoji: "💄", grad: "linear-gradient(135deg, #ec4899, #8b5cf6)" },
+// ─────────────────────────────────────────────────────────
+//  HERO SLIDES — curated high-quality Unsplash images
+//  Each URL is pinned to a specific photo ID so it never
+//  changes. ?auto=format serves AVIF/WebP automatically.
+// ─────────────────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    label: "NEW SEASON",
+    headline: "Redefine\nYour Style",
+    sub: "Premium fashion curated for the bold",
+    bg: "linear-gradient(135deg,#0a0a0a 0%,#1a1a2e 100%)",
+    accent: "#c9a84c",
+    // Sharp-dressed man in navy suit, editorial feel
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=90&auto=format&fit=crop&crop=top",
+    imgPosition: "center top",
+  },
+  {
+    label: "PICK YOUR SCENT",
+    headline: "Luxury\nPerfumes",
+    sub: "Signature fragrances for every occasion",
+    bg: "linear-gradient(135deg,#1a0810 0%,#2e0f22 100%)",
+    accent: "#e8c5a0",
+    // Elegant perfume bottle flat-lay on dark background
+    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=800&q=90&auto=format&fit=crop&crop=center",
+    imgPosition: "center center",
+  },
+  {
+    label: "STEP IN STYLE",
+    headline: "Designer\nFootwear",
+    sub: "Walk bold — shoes that make a statement",
+    bg: "linear-gradient(135deg,#0a0f1a 0%,#0d1e38 100%)",
+    accent: "#6ba3d6",
+    // Clean white sneaker on minimal dark background
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=90&auto=format&fit=crop&crop=center",
+    imgPosition: "center center",
+  },
+  {
+    label: "WOMEN'S EDIT",
+    headline: "Effortless\nElegance",
+    sub: "Discover the new women's collection",
+    bg: "linear-gradient(135deg,#160808 0%,#2e1010 100%)",
+    accent: "#f5c6c6",
+    // Fashion editorial — woman in elegant dress
+    image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&q=90&auto=format&fit=crop&crop=top",
+    imgPosition: "center top",
+  },
 ];
 
 export default function HomePage() {
-  const [activeCategory, setActiveCategory] = useState("ALL");
-  const [sortBy, setSortBy]                 = useState("Relevance");
-  const [wishlist, setWishlist]             = useState([]);
-  const [activeBanner, setActiveBanner]     = useState(0);
-  const [priceRange, setPriceRange]         = useState(5000);
+  const navigate = useNavigate();
+  const [products, setProducts]       = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [wishlistIds, setWishlistIds] = useState(new Set());
+  const [sortBy, setSortBy]           = useState("Relevance");
+  const [priceRange, setPriceRange]   = useState(5000);
+  const [toast, setToast]             = useState(null);
+  const [heroIdx, setHeroIdx]         = useState(0);
+  const [heroAnim, setHeroAnim]       = useState(true);
+  const [addingId, setAddingId]       = useState(null);
+  const heroTimer = useRef(null);
 
-  const toggleWishlist = (id) =>
-    setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  // ── hero auto-play ──
+  const startTimer = () => {
+    clearInterval(heroTimer.current);
+    heroTimer.current = setInterval(() => {
+      setHeroAnim(false);
+      setTimeout(() => {
+        setHeroIdx(i => (i + 1) % HERO_SLIDES.length);
+        setHeroAnim(true);
+      }, 350);
+    }, 5000);
+  };
+  useEffect(() => { startTimer(); return () => clearInterval(heroTimer.current); }, []);
 
-  let filtered = allProducts.filter(p =>
-    (activeCategory === "ALL" || p.category === activeCategory) && p.price <= priceRange
-  );
+  const goSlide = (i) => {
+    setHeroAnim(false);
+    setTimeout(() => { setHeroIdx(i); setHeroAnim(true); }, 250);
+    startTimer();
+  };
 
-  if (sortBy === "Price: Low to High")  filtered = [...filtered].sort((a, b) => a.price - b.price);
-  if (sortBy === "Price: High to Low")  filtered = [...filtered].sort((a, b) => b.price - a.price);
-  if (sortBy === "Rating")              filtered = [...filtered].sort((a, b) => b.rating - a.rating);
-  if (sortBy === "New Arrivals")        filtered = [...filtered].filter(p => p.badge === "New");
+  const showToast = (msg, color = "#16a34a") => {
+    setToast({ msg, color });
+    setTimeout(() => setToast(null), 2500);
+  };
 
-  const discount = (p, o) => Math.round(((o - p) / o) * 100);
+  // ── fetch products ──
+  useEffect(() => {
+    fetch(`${API}/products`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(err => { setError(err.message); setLoading(false); });
+  }, []);
+
+  // ── fetch wishlist ids ──
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    fetch(`${API}/wishlist/ids`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(ids => setWishlistIds(new Set(ids)))
+      .catch(() => {});
+  }, []);
+
+  const toggleWishlist = useCallback(async (e, productId) => {
+    e.stopPropagation();
+    const token = getToken();
+    if (!token) { navigate("/login"); return; }
+    const isAdded = wishlistIds.has(productId);
+    setWishlistIds(prev => {
+      const n = new Set(prev);
+      isAdded ? n.delete(productId) : n.add(productId);
+      return n;
+    });
+    try {
+      if (isAdded) {
+        await fetch(`${API}/wishlist/${productId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showToast("Removed from Wishlist", "#6b7280");
+      } else {
+        await fetch(`${API}/wishlist`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ productId }),
+        });
+        showToast("❤️ Saved to Wishlist");
+      }
+    } catch {
+      setWishlistIds(prev => {
+        const n = new Set(prev);
+        isAdded ? n.add(productId) : n.delete(productId);
+        return n;
+      });
+      showToast("Something went wrong", "#dc2626");
+    }
+  }, [wishlistIds, navigate]);
+
+  const addToBag = useCallback(async (e, product) => {
+    e.stopPropagation();
+    const token = getToken();
+    if (!token) { navigate("/login"); return; }
+    setAddingId(product.id);
+    try {
+      const r = await fetch(`${API}/products/${product.id}`, {
+        headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
+      });
+      const detail = await r.json();
+      const variantId = detail.variants?.[0]?.id;
+      if (!variantId) { showToast("No variant available", "#dc2626"); return; }
+      const res = await fetch(`${API}/bag`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ variantId, quantity: 1 }),
+      });
+      if (!res.ok) { const err = await res.json(); showToast(err.error || "Error", "#dc2626"); return; }
+      showToast("🛒 Added to Bag!");
+    } catch {
+      showToast("Could not add to bag", "#dc2626");
+    } finally {
+      setAddingId(null);
+    }
+  }, [navigate]);
+
+  // ── filter + sort (no category filter) ──
+  let filtered = products.filter(p => (p.sale_price ?? p.base_price ?? 0) <= priceRange);
+  if (sortBy === "Price: Low to High")
+    filtered = [...filtered].sort((a, b) => (a.sale_price ?? a.base_price) - (b.sale_price ?? b.base_price));
+  else if (sortBy === "Price: High to Low")
+    filtered = [...filtered].sort((a, b) => (b.sale_price ?? b.base_price) - (a.sale_price ?? a.base_price));
+  else if (sortBy === "Rating")
+    filtered = [...filtered].sort((a, b) => b.rating - a.rating);
+
+  const slide = HERO_SLIDES[heroIdx];
 
   return (
-    <div style={{ minHeight: "100vh", background: theme.bg, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f7f4" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Jost:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; }
 
-      {/* ── Hero Banner ── */}
-      <div style={{ padding: "20px 24px 0", maxWidth: 1280, margin: "0 auto" }}>
-        {/* <div style={{
-          borderRadius: 16, overflow: "hidden", position: "relative",
-          background: banners[activeBanner].grad,
-          padding: "36px 40px", minHeight: 160,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+        /* ── cards ── */
+        .card-hover { transition: transform .3s ease, box-shadow .3s ease; }
+        .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,.14) !important; }
+        .product-card:hover .overlay-actions { opacity: 1 !important; }
+        .product-card:hover .card-img { transform: scale(1.06); }
+        .card-img { transition: transform .45s ease; }
+        .heart-btn { transition: transform .2s ease !important; }
+        .heart-btn:hover { transform: scale(1.2) !important; }
+        .btn-dark:hover { background: #333 !important; }
+
+        /* ── shimmer ── */
+        .shimmer {
+          background: linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);
+          background-size: 200%;
+          animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+
+        /* ── hero text animation ── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        .slide-in-0 { animation: fadeUp .45s 0s   ease both; }
+        .slide-in-1 { animation: fadeUp .45s .08s ease both; }
+        .slide-in-2 { animation: fadeUp .45s .16s ease both; }
+
+        /* ── range slider ── */
+        .range-styled { -webkit-appearance:none; height:3px; border-radius:2px; outline:none; cursor:pointer; }
+        .range-styled::-webkit-slider-thumb {
+          -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+          background:#c9a84c; cursor:pointer;
+          box-shadow: 0 0 0 3px rgba(201,168,76,.2);
+        }
+
+        /* ── hero image panel ── */
+        .dot-btn { transition: all .3s ease; border:none; cursor:pointer; padding:0; }
+        .hero-img-wrap { overflow:hidden; }
+        .hero-img-wrap img {
+          width:100%; height:100%; object-fit:cover; display:block;
+          transition: transform 7s ease, opacity .45s ease;
+        }
+        .hero-img-wrap:hover img { transform: scale(1.05); }
+      `}</style>
+
+      {/* ── TOAST ── */}
+      {toast && (
+        <div style={{
+          position:"fixed", top:80, left:"50%", transform:"translateX(-50%)",
+          background:toast.color, color:"#fff", padding:"11px 22px", borderRadius:5,
+          zIndex:9999, fontSize:13, fontWeight:600, fontFamily:"'Jost',sans-serif",
+          boxShadow:"0 8px 24px rgba(0,0,0,.2)", letterSpacing:".5px", whiteSpace:"nowrap",
         }}>
-          <div style={{ position: "absolute", top: -30, right: 80, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-          <div>
-            <div style={{ fontSize: 36 }}>{banners[activeBanner].emoji}</div>
-            <h2 style={{ margin: "8px 0 4px", fontSize: 28, fontWeight: 900, color: "#fff" }}>{banners[activeBanner].title}</h2>
-            <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.85)" }}>{banners[activeBanner].sub}</p>
-            <button style={{
-              marginTop: 16, background: "#fff", border: "none", borderRadius: 24,
-              padding: "10px 28px", fontSize: 13, fontWeight: 800,
-              color: theme.primary, cursor: "pointer", fontFamily: "inherit",
-            }}>Shop Now →</button>
-          </div>
-       
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {banners.map((_, i) => (
-              <button key={i} onClick={() => setActiveBanner(i)} style={{
-                width: i === activeBanner ? 24 : 8, height: 8, borderRadius: 4,
-                background: i === activeBanner ? "#fff" : "rgba(255,255,255,0.4)",
-                border: "none", cursor: "pointer", padding: 0,
-                transition: "all 0.3s",
-              }} />
-            ))}
-          </div>
-        </div> */}
-      </div>
+          {toast.msg}
+        </div>
+      )}
 
-      {/* ── Category Chips ── */}
-      <div style={{ maxWidth: 1280, margin: "20px auto 0", padding: "0 24px" }}>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-              border: activeCategory === cat ? `2px solid ${theme.primary}` : `2px solid ${theme.muted}`,
-              background: activeCategory === cat ? `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` : theme.white,
-              color: activeCategory === cat ? "#fff" : theme.dark,
-              borderRadius: 24, padding: "8px 22px", fontSize: 13, fontWeight: 700,
-              cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
-              transition: "all 0.2s",
-            }}>{cat}</button>
+      {/* ════════════════════════════════════════
+          HERO  — 420 px tall
+      ════════════════════════════════════════ */}
+      <div style={{
+        position:"relative", height:420, overflow:"hidden",
+        background:slide.bg, transition:"background .7s ease",
+      }}>
+
+        {/* subtle grid lines */}
+        <div style={{
+          position:"absolute", inset:0, pointerEvents:"none",
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 80px)",
+        }} />
+
+        {/* ── RIGHT photo ── */}
+        <div
+          className="hero-img-wrap"
+          style={{
+            position:"absolute", right:0, top:0,
+            width:"52%", height:"100%",
+            opacity: heroAnim ? 1 : 0,
+            transition:"opacity .45s ease",
+          }}
+        >
+          <img
+            src={slide.image}
+            alt={slide.label}
+            style={{ objectPosition: slide.imgPosition }}
+          />
+          {/* gradient blend: left edge fades into dark bg */}
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none",
+            background:"linear-gradient(to right, rgba(5,5,10,.95) 0%, rgba(5,5,10,.35) 28%, transparent 58%)",
+          }} />
+          {/* bottom vignette */}
+          <div style={{
+            position:"absolute", inset:0, pointerEvents:"none",
+            background:"linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 40%)",
+          }} />
+        </div>
+
+        {/* glow behind photo */}
+        <div style={{
+          position:"absolute", right:"22%", top:"50%",
+          transform:"translate(50%,-50%)",
+          width:300, height:300, borderRadius:"50%",
+          background:`radial-gradient(circle, ${slide.accent}1a 0%, transparent 70%)`,
+          pointerEvents:"none", transition:"background .7s ease",
+        }} />
+
+        {/* ── LEFT text ── */}
+        <div style={{
+          position:"relative", zIndex:2, height:"100%",
+          display:"flex", flexDirection:"column", justifyContent:"center",
+          padding:"0 60px", maxWidth:530,
+        }}>
+          {heroAnim && (
+            <>
+              <p className="slide-in-0" style={{
+                margin:"0 0 12px", color:slide.accent, fontSize:10,
+                fontWeight:600, letterSpacing:4, textTransform:"uppercase",
+                fontFamily:"'Jost',sans-serif",
+              }}>
+                {slide.label}
+              </p>
+              <h1 className="slide-in-1" style={{
+                margin:"0 0 16px", color:"#fff", fontSize:56, fontWeight:900,
+                lineHeight:1.06, whiteSpace:"pre-line",
+                fontFamily:"'Playfair Display',serif",
+                textShadow:"0 4px 28px rgba(0,0,0,.5)",
+              }}>
+                {slide.headline}
+              </h1>
+              <p className="slide-in-2" style={{
+                margin:0, color:"rgba(255,255,255,.52)", fontSize:14,
+                fontFamily:"'Jost',sans-serif", fontWeight:300, letterSpacing:.5,
+              }}>
+                {slide.sub}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* dot nav */}
+        <div style={{ position:"absolute", bottom:24, left:60, display:"flex", gap:8, zIndex:3 }}>
+          {HERO_SLIDES.map((_, i) => (
+            <button key={i} className="dot-btn" onClick={() => goSlide(i)}
+              style={{
+                width: i === heroIdx ? 28 : 8, height:8, borderRadius:4,
+                background: i === heroIdx ? slide.accent : "rgba(255,255,255,.25)",
+              }} />
           ))}
         </div>
-      </div>
 
-      {/* ── Filter + Sort bar ── */}
-      <div style={{ maxWidth: 1280, margin: "16px auto 0", padding: "0 24px" }}>
+        {/* slide counter */}
         <div style={{
-          background: theme.white, borderRadius: 12, padding: "14px 20px",
-          display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
-          boxShadow: "0 2px 12px rgba(148,0,211,0.06)",
-          border: `1px solid ${theme.lightPurple}44`,
+          position:"absolute", bottom:28, right:60,
+          color:"rgba(255,255,255,.22)", fontSize:11,
+          letterSpacing:3, fontFamily:"'Jost',sans-serif",
         }}>
-          {/* Results count */}
-          <span style={{ fontSize: 13, color: "#888", fontWeight: 600 }}>
-            <strong style={{ color: theme.primary }}>{filtered.length}</strong> products
-          </span>
-
-          <div style={{ height: 20, width: 1, background: theme.muted }} />
-
-          {/* Price filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 12, color: "#888", fontWeight: 600, whiteSpace: "nowrap" }}>MAX PRICE</span>
-            <input type="range" min="200" max="5000" step="100" value={priceRange}
-              onChange={e => setPriceRange(Number(e.target.value))}
-              style={{ width: 100, accentColor: theme.primary }}
-            />
-            <span style={{ fontSize: 13, fontWeight: 700, color: theme.primary, minWidth: 52 }}>₹{priceRange}</span>
-          </div>
-
-          <div style={{ height: 20, width: 1, background: theme.muted }} />
-
-          {/* Sort */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-            <span style={{ fontSize: 12, color: "#888", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-              <FilterIcon /> SORT BY
-            </span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
-              border: `1.5px solid ${theme.lightPurple}`, borderRadius: 8,
-              padding: "6px 12px", fontSize: 13, color: theme.dark,
-              background: theme.white, cursor: "pointer", fontFamily: "inherit",
-              outline: "none",
-            }}>
-              {sortOptions.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
+          0{heroIdx + 1} / 0{HERO_SLIDES.length}
         </div>
       </div>
 
-      {/* ── Product Grid ── */}
-      <div style={{ maxWidth: 1280, margin: "20px auto 60px", padding: "0 24px" }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "#aaa" }}>
-            <div style={{ fontSize: 48 }}>🔍</div>
-            <p style={{ fontSize: 16, marginTop: 16 }}>No products found. Try adjusting filters.</p>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 18 }}>
-            {filtered.map(product => (
-              <div key={product.id} style={{
-                background: theme.white, borderRadius: 16, overflow: "hidden",
-                boxShadow: "0 2px 16px rgba(148,0,211,0.07)",
-                border: `1px solid ${theme.lightPurple}44`,
-                transition: "transform 0.2s, box-shadow 0.2s",
-                cursor: "pointer",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 8px 28px rgba(148,0,211,0.14)`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(148,0,211,0.07)"; }}
-              >
-                {/* Image area */}
-                <div style={{
-                  height: 180, background: `${theme.lightPurple}33`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 64, position: "relative",
-                }}>
-                  {product.emoji}
-                  {/* wishlist btn */}
-                  <button onClick={e => { e.stopPropagation(); toggleWishlist(product.id); }} style={{
-                    position: "absolute", top: 10, right: 10,
-                    background: "#fff", border: "none", borderRadius: "50%",
-                    width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  }}>
-                    <HeartIcon filled={wishlist.includes(product.id)} />
-                  </button>
-                  {/* badge */}
-                  {product.badge && (
-                    <span style={{
-                      position: "absolute", top: 10, left: 10,
-                      fontSize: 10, fontWeight: 700,
-                      padding: "3px 8px", borderRadius: 6,
-                      background: badgeColors[product.badge]?.bg,
-                      color: badgeColors[product.badge]?.color,
-                    }}>{product.badge}</span>
-                  )}
-                  {/* discount */}
-                  <span style={{
-                    position: "absolute", bottom: 10, left: 10,
-                    background: theme.primary, color: "#fff",
-                    fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-                  }}>{discount(product.price, product.original)}% OFF</span>
-                </div>
+      {/* ════════════════════════════════════════
+          FILTER BAR  (category tabs removed)
+      ════════════════════════════════════════ */}
+      <div style={{
+        background:"#fff", borderBottom:"1px solid #ebebeb",
+        padding:"13px 40px", display:"flex", alignItems:"center", gap:20,
+      }}>
+        {/* sort dropdown */}
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+          style={{
+            border:"none", background:"transparent", fontSize:11,
+            color:"#666", cursor:"pointer", outline:"none",
+            letterSpacing:1, textTransform:"uppercase",
+            fontFamily:"'Jost',sans-serif", fontWeight:500,
+          }}>
+          {sortOptions.map(o => <option key={o}>{o}</option>)}
+        </select>
 
-                {/* Info */}
-                <div style={{ padding: "14px 14px 16px" }}>
-                  <div style={{ fontSize: 11, color: "#aaa", fontWeight: 600, marginBottom: 3 }}>{product.brand}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: theme.dark, marginBottom: 6, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>
+        <div style={{ width:1, height:18, background:"#e5e5e5" }} />
 
-                  {/* Rating */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
-                    <span style={{
-                      background: "#22c55e", color: "#fff", fontSize: 11, fontWeight: 700,
-                      padding: "2px 7px", borderRadius: 4, display: "flex", alignItems: "center", gap: 3,
-                    }}>
-                      {product.rating} <StarIcon />
-                    </span>
-                    <span style={{ fontSize: 11, color: "#aaa" }}>({product.reviews})</span>
-                  </div>
+        <span style={{ fontSize:11, color:"#bbb", fontFamily:"'Jost',sans-serif", letterSpacing:1 }}>
+          {loading ? "Loading…" : `${filtered.length} ${filtered.length === 1 ? "product" : "products"}`}
+        </span>
 
-                  {/* Price */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: theme.dark }}>₹{product.price}</span>
-                    <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>₹{product.original}</span>
-                  </div>
+        {/* price slider */}
+        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{
+            fontSize:11, color:"#aaa", letterSpacing:1,
+            textTransform:"uppercase", fontFamily:"'Jost',sans-serif",
+          }}>
+            Max Price
+          </span>
+          <input type="range" min="100" max="5000" value={priceRange}
+            onChange={e => setPriceRange(Number(e.target.value))}
+            className="range-styled"
+            style={{
+              width:130,
+              background:`linear-gradient(to right,#c9a84c ${((priceRange - 100) / 4900) * 100}%,#e0e0e0 0%)`,
+            }} />
+          <span style={{
+            fontSize:13, fontWeight:600, color:"#1a1a1a",
+            fontFamily:"'Jost',sans-serif", minWidth:60,
+          }}>
+            ₹{priceRange.toLocaleString()}
+          </span>
+        </div>
+      </div>
 
-                  {/* Add to bag */}
-                  <button style={{
-                    width: "100%", marginTop: 12,
-                    background: "#000",
-                    color: "#fff", border: "none", borderRadius: 8,
-                    padding: "10px 0", fontSize: 13, fontWeight: 700,
-                    cursor: "pointer", fontFamily: "inherit",
-                    transition: "opacity 0.2s",
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                  >
-                    Add to Cart
-                  </button>
+      {/* ════════════════════════════════════════
+          PRODUCT GRID
+      ════════════════════════════════════════ */}
+      <div style={{ padding:"36px 40px 80px" }}>
+
+        {/* section header */}
+        <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:28 }}>
+          <h2 style={{
+            margin:0, fontSize:24, fontWeight:700,
+            color:"#1a1a1a", fontFamily:"'Playfair Display',serif",
+          }}>
+            All Products
+          </h2>
+          <div style={{ flex:1, height:1, background:"linear-gradient(to right,#e0e0e0,transparent)" }} />
+        </div>
+
+        {/* skeleton */}
+        {loading && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))", gap:22 }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ borderRadius:8, overflow:"hidden", background:"#fff" }}>
+                <div className="shimmer" style={{ height:290 }} />
+                <div style={{ padding:16 }}>
+                  <div className="shimmer" style={{ height:10, borderRadius:4, marginBottom:10, width:"55%" }} />
+                  <div className="shimmer" style={{ height:15, borderRadius:4, marginBottom:12, width:"80%" }} />
+                  <div className="shimmer" style={{ height:10, borderRadius:4, width:"35%" }} />
                 </div>
               </div>
             ))}
           </div>
         )}
+
+        {error && (
+          <p style={{ color:"#dc2626", fontFamily:"'Jost',sans-serif" }}>⚠️ {error}</p>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div style={{ textAlign:"center", padding:"70px 20px" }}>
+            <div style={{ fontSize:52 }}>🔍</div>
+            <p style={{ color:"#888", fontFamily:"'Jost',sans-serif", fontSize:14, marginTop:12 }}>
+              No products found
+            </p>
+            <button onClick={() => setPriceRange(5000)}
+              style={{
+                marginTop:14, padding:"11px 26px", background:"#1a1a1a",
+                color:"#fff", border:"none", borderRadius:3, cursor:"pointer",
+                fontSize:11, letterSpacing:2, textTransform:"uppercase",
+                fontFamily:"'Jost',sans-serif",
+              }}>
+              Reset Filter
+            </button>
+          </div>
+        )}
+
+        {!loading && filtered.length > 0 && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))", gap:22 }}>
+            {filtered.map(product => {
+              const imgUrl    = getPrimaryImage(product.media);
+              const salePrice = product.sale_price ?? null;
+              const basePrice = product.base_price ?? 0;
+              const pct       = basePrice && salePrice
+                ? Math.round(((basePrice - salePrice) / basePrice) * 100) : 0;
+              const inWish    = wishlistIds.has(product.id);
+              const isAdding  = addingId === product.id;
+
+              return (
+                <div key={product.id} className="card-hover product-card"
+                  onClick={() => navigate(`/product/${product.id}`)}
+                  style={{
+                    background:"#fff", borderRadius:8, overflow:"hidden",
+                    cursor:"pointer", position:"relative",
+                    boxShadow:"0 2px 10px rgba(0,0,0,.06)",
+                  }}>
+
+                  {/* image */}
+                  <div style={{ position:"relative", height:290, background:"#f5f4f0", overflow:"hidden" }}>
+                    {imgUrl
+                      ? <img src={imgUrl} alt={product.title} className="card-img"
+                          style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                          onError={e => { e.target.style.display = "none"; }} />
+                      : <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:52 }}>🛍️</div>
+                    }
+
+                    {pct > 0 && (
+                      <div style={{
+                        position:"absolute", top:11, left:11,
+                        background:"#e11d48", color:"#fff", fontSize:10,
+                        fontWeight:700, padding:"3px 7px", borderRadius:2,
+                        letterSpacing:1, fontFamily:"'Jost',sans-serif",
+                      }}>
+                        {pct}% OFF
+                      </div>
+                    )}
+
+                    {/* hover overlay */}
+                    <div className="overlay-actions" style={{
+                      position:"absolute", inset:0, background:"rgba(0,0,0,.22)",
+                      display:"flex", alignItems:"flex-end", justifyContent:"center",
+                      padding:"0 14px 14px", opacity:0, transition:"opacity .25s ease",
+                    }}>
+                      <button onClick={e => addToBag(e, product)} disabled={isAdding}
+                        style={{
+                          width:"100%", padding:"11px 0", background:"#fff",
+                          color:"#1a1a1a", border:"none", borderRadius:3, fontSize:10,
+                          fontWeight:700, cursor:"pointer", letterSpacing:2,
+                          textTransform:"uppercase", fontFamily:"'Jost',sans-serif",
+                          display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                        }}>
+                        <BagIcon /> {isAdding ? "Adding…" : "Add to Bag"}
+                      </button>
+                    </div>
+
+                    {/* wishlist */}
+                    <button className="heart-btn" onClick={e => toggleWishlist(e, product.id)}
+                      style={{
+                        position:"absolute", top:11, right:11,
+                        background: inWish ? "rgba(225,29,72,.12)" : "rgba(255,255,255,.88)",
+                        border:"none", borderRadius:"50%", width:35, height:35,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        cursor:"pointer", backdropFilter:"blur(4px)",
+                        boxShadow:"0 2px 8px rgba(0,0,0,.14)",
+                      }}>
+                      <HeartIcon filled={inWish} />
+                    </button>
+                  </div>
+
+                  {/* info */}
+                  <div style={{ padding:"14px 16px 18px" }}>
+                    <p style={{
+                      margin:"0 0 3px", fontSize:10, color:"#c9a84c",
+                      fontWeight:600, letterSpacing:2, textTransform:"uppercase",
+                      fontFamily:"'Jost',sans-serif",
+                    }}>
+                      {product.brand}
+                    </p>
+                    <h4 style={{
+                      margin:"0 0 10px", fontSize:14, fontWeight:400,
+                      color:"#1a1a1a", lineHeight:1.4,
+                      fontFamily:"'Playfair Display',serif",
+                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                    }}>
+                      {product.title}
+                    </h4>
+
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:7 }}>
+                        <span style={{ fontSize:16, fontWeight:700, color:"#1a1a1a", fontFamily:"'Jost',sans-serif" }}>
+                          ₹{(salePrice ?? basePrice).toLocaleString()}
+                        </span>
+                        {salePrice && (
+                          <span style={{ fontSize:11, color:"#c0b9b9", textDecoration:"line-through", fontFamily:"'Jost',sans-serif" }}>
+                            ₹{basePrice.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{
+                        display:"flex", alignItems:"center", gap:3,
+                        background:"#f8f7f4", padding:"3px 8px", borderRadius:12,
+                      }}>
+                        <span style={{ color:"#c9a84c" }}><StarIcon /></span>
+                        <span style={{ fontSize:11, fontWeight:600, color:"#555", fontFamily:"'Jost',sans-serif" }}>
+                          {Number(product.rating).toFixed(1)}
+                        </span>
+                        <span style={{ fontSize:10, color:"#bbb", fontFamily:"'Jost',sans-serif" }}>
+                          ({product.review_count})
+                        </span>
+                      </div>
+                    </div>
+
+                    <button onClick={e => addToBag(e, product)} disabled={isAdding} className="btn-dark"
+                      style={{
+                        width:"100%", padding:"10px 0", background:"#1a1a1a",
+                        color:"#fff", border:"none", borderRadius:3, fontSize:10,
+                        fontWeight:600, cursor:"pointer", letterSpacing:2,
+                        textTransform:"uppercase", fontFamily:"'Jost',sans-serif",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        gap:7, transition:"background .2s",
+                      }}>
+                      <BagIcon /> {isAdding ? "Adding…" : "Add to Bag"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* ════════════════════════════════════════
+          FOOTER
+      ════════════════════════════════════════ */}
+      {/* <div style={{
+        background:"#1a1a1a", padding:"36px 40px",
+        display:"flex", gap:32, flexWrap:"wrap",
+        alignItems:"center", justifyContent:"space-between",
+      }}>
+        {[
+          { icon:"🚚", title:"Free Delivery",   sub:"On orders above ₹999" },
+          { icon:"↩️", title:"Easy Returns",    sub:"30-day return policy" },
+          { icon:"🔒", title:"Secure Payment",  sub:"100% safe checkout" },
+          { icon:"✨", title:"Premium Quality", sub:"Curated fashion brands" },
+        ].map(f => (
+          <div key={f.title} style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:26 }}>{f.icon}</span>
+            <div>
+              <p style={{ margin:0, color:"#fff", fontSize:12, fontWeight:600, fontFamily:"'Jost',sans-serif" }}>
+                {f.title}
+              </p>
+              <p style={{ margin:0, color:"rgba(255,255,255,.38)", fontSize:11, fontFamily:"'Jost',sans-serif" }}>
+                {f.sub}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div> */}
     </div>
   );
 }
