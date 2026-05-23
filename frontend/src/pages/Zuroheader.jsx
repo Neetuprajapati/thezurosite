@@ -77,7 +77,7 @@ export default function LuxuryHeader() {
 
   // ── Load all products once ──────────────────────────────────
   useEffect(() => {
-    fetch("http://localhost:5000/api/products")
+    fetch("https://api.thezuro.com/api/products")
       .then(r => r.json())
       .then(data => {
         setAllProducts(Array.isArray(data) ? data : []);

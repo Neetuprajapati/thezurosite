@@ -78,9 +78,9 @@ export default function ProfilePage() {
         const token = localStorage.getItem("token");
 
         const [profileRes, statsRes, bagRes] = await Promise.all([
-          fetch("http://localhost:5000/api/user/profile", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/user/stats",   { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/bag",          { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("https://api.thezuro.com/api/user/profile", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("https://api.thezuro.com/api/user/stats",   { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("https://api.thezuro.com/api/bag",          { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         const profileData = await profileRes.json();
@@ -103,7 +103,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/user/update", {
+      const res = await fetch("https://api.thezuro.com/api/user/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),

@@ -15,5 +15,5 @@ app.use("/api/wishlist", require("./routes/wishlistRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
 
 app.listen(5000, () => {
-  console.log("✅ Server running on http://localhost:5000");
+  console.log("✅ Server running on https://api.thezuro.com");
 });

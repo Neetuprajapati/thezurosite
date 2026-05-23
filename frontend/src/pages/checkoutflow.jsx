@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import theme from "./theme";
 
-const API = "http://localhost:5000/api";
+const API = "https://api.thezuro.com/api";
 const getToken = () => localStorage.getItem("token");
 
 // ─── tiny helpers ────────────────────────────────────────────────────────────

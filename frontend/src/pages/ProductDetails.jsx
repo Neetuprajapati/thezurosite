@@ -6,7 +6,7 @@
 //   const [product, setProduct] = useState(null);
 
 //   useEffect(() => {
-//     fetch(`http://localhost:5000/api/products/${id}`)
+//     fetch(`https://api.thezuro.com/api/products/${id}`)
 //       .then(res => res.json())
 //       .then(data => setProduct(data));
 //   }, [id]);
@@ -39,7 +39,7 @@ export default function ProductDetails() {
 
     // PRODUCT DETAILS
 
-    fetch(`http://localhost:5000/api/products/${id}`)
+    fetch(`https://api.thezuro.com/api/products/${id}`)
       .then((res) => res.json())
       .then((data) => {
 
@@ -59,7 +59,7 @@ export default function ProductDetails() {
 
     // RELATED PRODUCTS
 
-    fetch(`http://localhost:5000/api/products`)
+    fetch(`https://api.thezuro.com/api/products`)
       .then((res) => res.json())
       .then((data) => {
         setRelatedProducts(data);

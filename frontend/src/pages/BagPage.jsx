@@ -2,7 +2,7 @@
 // import { useNavigate } from "react-router-dom";
 // import theme from "./theme";
 
-// const API = "http://localhost:5000/api";
+// const API = "https://api.thezuro.com/api";
 // const getToken = () => localStorage.getItem("token");
 
 // export default function BagPage() {
@@ -173,7 +173,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import theme from "./theme";
 
-const API = "http://localhost:5000/api";
+const API = "https://api.thezuro.com/api";
 const getToken = () => localStorage.getItem("token");
 
 export default function BagPage() {

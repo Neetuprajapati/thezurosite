@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ForgotPasswordPopup from "./ForgotPasswordPopup";
 
-const API = "http://localhost:5000/api/auth";
+const API = "https://api.thezuro.com/api/auth";
 
 // ── Gold color tokens ────────────────────────────────────────
 const GOLD       = "#C9A84C";
