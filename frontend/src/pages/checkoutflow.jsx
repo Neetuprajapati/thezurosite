@@ -1,503 +1,510 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import theme from "./theme";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const API = "https://api.thezuro.com/api";
+const API = "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
 
-// ─── tiny helpers ────────────────────────────────────────────────────────────
-const fmt = (n) => `₹${Number(n).toFixed(2)}`;
+// ── Step indicator ────────────────────────────────────────────────────────────
+const steps = ["Cart", "Details", "Payment", "Done"];
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
-function Steps({ current }) {
-  const steps = ["Bag", "Address", "Payment", "Confirmation"];
+function StepBar({ current }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 28 }}>
-      {steps.map((s, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <div key={s} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : "none" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%",
-                background: done ? "#16a34a" : active ? theme.primary : "#e5e7eb",
-                color: done || active ? "#fff" : "#9ca3af",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 700, transition: "all .3s"
-              }}>
-                {done ? "✓" : i + 1}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 400, color: active ? theme.primary : done ? "#16a34a" : "#9ca3af", whiteSpace: "nowrap" }}>{s}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: done ? "#16a34a" : "#e5e7eb", margin: "0 4px", marginBottom: 18, transition: "background .3s" }} />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Card shell ───────────────────────────────────────────────────────────────
-function Card({ children, style }) {
-  return (
-    <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", ...style }}>
-      {children}
-    </div>
-  );
-}
-
-// ─── Input field ──────────────────────────────────────────────────────────────
-function Field({ label, id, error, ...props }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label htmlFor={id} style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{label}</label>
-      <input
-        id={id}
-        style={{
-          padding: "10px 12px", border: `1.5px solid ${error ? "#ef4444" : "#e5e7eb"}`,
-          borderRadius: 8, fontSize: 14, outline: "none", transition: "border .2s",
-          background: "#fafafa"
-        }}
-        onFocus={e => e.target.style.borderColor = theme.primary}
-        onBlur={e => e.target.style.borderColor = error ? "#ef4444" : "#e5e7eb"}
-        {...props}
-      />
-      {error && <span style={{ fontSize: 12, color: "#ef4444" }}>{error}</span>}
-    </div>
-  );
-}
-
-// ─── ORDER SUMMARY sidebar ────────────────────────────────────────────────────
-function OrderSummary({ items, subtotal, shipping, total }) {
-  return (
-    <Card style={{ width: 260, flexShrink: 0, position: "sticky", top: 80 }}>
-      <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700 }}>Order Summary</h3>
-      <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        {items.map(item => (
-          <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ width: 44, height: 48, borderRadius: 6, overflow: "hidden", background: "#f5f5f5", flexShrink: 0 }}>
-              {item.image_url
-                ? <img src={item.image_url} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🛍️</div>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{item.title}</p>
-              <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>Qty: {item.quantity}</p>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt((item.sale_price ?? item.base_price) * item.quantity)}</span>
-          </div>
-        ))}
-      </div>
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 12px" }} />
-
-      {/* ── FREE shipping banner ── */}
-      {shipping === 0 ? (
-        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#16a34a", fontWeight: 700, textAlign: "center" }}>
-          🎉 Yay! You get FREE delivery on this order
-        </div>
-      ) : (
-        <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#92400e", textAlign: "center" }}>
-          🚚 Add ₹{999 - subtotal} more for FREE delivery
-        </div>
-      )}
-
-      {[
-        ["Subtotal", fmt(subtotal)],
-        ["Delivery Charges", shipping === 0 ? "FREE" : fmt(shipping)],
-      ].map(([k, v]) => (
-        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#6b7280", marginBottom: 6 }}>
-          <span>{k}</span>
-          <span style={{ color: v === "FREE" ? "#16a34a" : "#111", fontWeight: v === "FREE" ? 700 : 400 }}>{v}</span>
-        </div>
-      ))}
-
-      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 16, marginTop: 8 }}>
-        <span>Total</span><span>{fmt(total)}</span>
-      </div>
-    </Card>
-  );
-}
-
-// ─── STEP 1: Address ──────────────────────────────────────────────────────────
-function AddressStep({ onNext }) {
-  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", state: "", pincode: "" });
-  const [errors, setErrors] = useState({});
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const validate = () => {
-    const e = {};
-    if (!form.name.trim()) e.name = "Full name is required";
-    if (!/^\d{10}$/.test(form.phone)) e.phone = "Enter valid 10-digit phone number";
-    if (!form.address.trim()) e.address = "Address is required";
-    if (!form.city.trim()) e.city = "City is required";
-    if (!form.state.trim()) e.state = "State is required";
-    if (!/^\d{6}$/.test(form.pincode)) e.pincode = "Enter valid 6-digit pincode";
-    return e;
-  };
-
-  const handleNext = () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    onNext(form);
-  };
-
-  const row2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 };
-
-  return (
-    <Card>
-      <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700 }}>Delivery Address</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <Field label="Full Name *" id="name" placeholder="Enter your name" value={form.name} onChange={e => set("name", e.target.value)} error={errors.name} />
-        <Field label="Phone Number *" id="phone" placeholder="Enter phone number" value={form.phone} onChange={e => set("phone", e.target.value)} error={errors.phone} maxLength={10} />
-        <Field label="Address (House / Street) *" id="address" placeholder="Enter the address" value={form.address} onChange={e => set("address", e.target.value)} error={errors.address} />
-        <div style={row2}>
-          <Field label="City *" id="city" placeholder="Enter city name" value={form.city} onChange={e => set("city", e.target.value)} error={errors.city} />
-          <Field label="State *" id="state" placeholder="Enter state name" value={form.state} onChange={e => set("state", e.target.value)} error={errors.state} />
-        </div>
-        <div style={{ ...row2, gridTemplateColumns: "1fr 2fr" }}>
-          <Field label="Pincode *" id="pincode" placeholder="Enter pin code" value={form.pincode} onChange={e => set("pincode", e.target.value)} error={errors.pincode} maxLength={6} />
-          <Field label="Landmark (optional)" id="landmark" placeholder="Enter near landmark" value={form.landmark || ""} onChange={e => set("landmark", e.target.value)} />
-        </div>
-      </div>
-      <button onClick={handleNext} style={{
-        marginTop: 24, width: "100%", padding: "13px 0",
-        background: theme.primary, color: "#fff", border: "none",
-        borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 15
-      }}>
-        Continue to Payment →
-      </button>
-    </Card>
-  );
-}
-
-// ─── STEP 2: Payment ─────────────────────────────────────────────────────────
-function PaymentStep({ total, subtotal, onBack, onPay, loading }) {
-  const [method, setMethod] = useState("card"); // card | upi | netbanking | cod
-  const [card, setCard] = useState({ number: "", expiry: "", cvv: "", name: "" });
-  const [upi, setUpi] = useState("");
-  const [bank, setBank] = useState("");
-  const [errors, setErrors] = useState({});
-
-  const setC = (k, v) => setCard(c => ({ ...c, [k]: v }));
-
-  const formatCard = (v) => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-  const formatExpiry = (v) => {
-    const d = v.replace(/\D/g, "").slice(0, 4);
-    return d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-  };
-
-  const validate = () => {
-    const e = {};
-    if (method === "card") {
-      if (card.number.replace(/\s/g, "").length < 16) e.number = "Enter 16-digit card number";
-      if (!/^\d{2}\/\d{2}$/.test(card.expiry)) e.expiry = "MM/YY format";
-      if (card.cvv.length < 3) e.cvv = "3-digit CVV";
-      if (!card.name.trim()) e.name = "Name on card required";
-    }
-    if (method === "upi" && !upi.includes("@")) e.upi = "Enter valid UPI ID (e.g. name@upi)";
-    if (method === "netbanking" && !bank) e.bank = "Select a bank";
-    return e;
-  };
-
-  const handlePay = () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    onPay({ method, card: method === "card" ? card : undefined, upi: method === "upi" ? upi : undefined, bank: method === "netbanking" ? bank : undefined });
-  };
-
-  const methods = [
-    { id: "card", icon: "💳", label: "Credit / Debit Card" },
-    { id: "upi", icon: "📱", label: "UPI" },
-    { id: "netbanking", icon: "🏦", label: "Net Banking" },
-    { id: "cod", icon: "💵", label: "Cash on Delivery" },
-  ];
-
-  const banks = ["State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra", "Punjab National Bank"];
-
-  return (
-    <Card>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#6b7280", padding: "0 4px" }}>←</button>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Payment</h2>
-      </div>
-
-      {/* Method tabs */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-        {methods.map(m => (
-          <button key={m.id} onClick={() => { setMethod(m.id); setErrors({}); }}
-            style={{
-              padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
-              border: `2px solid ${method === m.id ? theme.primary : "#e5e7eb"}`,
-              background: method === m.id ? `${theme.primary}15` : "#fff",
-              color: method === m.id ? theme.primary : "#374151",
-              transition: "all .2s"
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 36 }}>
+      {steps.map((s, i) => (
+        <div key={s} style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%",
+              background: i < current ? "#16a34a" : i === current ? "#111" : "#e5e5e5",
+              color: i < current ? "#fff" : i === current ? "#fff" : "#999",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 700,
+              border: i === current ? "2px solid #111" : "none",
+              transition: ".3s",
             }}>
-            {m.icon} {m.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Card form */}
-      {method === "card" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-            {["VISA", "MC", "AMEX", "RuPay"].map(b => (
-              <span key={b} style={{ padding: "3px 8px", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 10, fontWeight: 800, color: "#555", letterSpacing: 0.5 }}>{b}</span>
-            ))}
+              {i < current ? "✓" : i + 1}
+            </div>
+            <span style={{ fontSize: 11, color: i === current ? "#111" : "#aaa", fontWeight: i === current ? 700 : 400 }}>
+              {s}
+            </span>
           </div>
-          <Field label="Card Number" id="cn" placeholder="1234 5678 9012 3456" value={card.number}
-            onChange={e => setC("number", formatCard(e.target.value))} error={errors.number} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Expiry (MM/YY)" id="exp" placeholder="08/27" value={card.expiry}
-              onChange={e => setC("expiry", formatExpiry(e.target.value))} error={errors.expiry} />
-            <Field label="CVV" id="cvv" placeholder="•••" type="password" maxLength={4} value={card.cvv}
-              onChange={e => setC("cvv", e.target.value.replace(/\D/g, "").slice(0, 4))} error={errors.cvv} />
-          </div>
-          <Field label="Name on Card" id="cname" placeholder="RAHUL SHARMA" value={card.name}
-            onChange={e => setC("name", e.target.value.toUpperCase())} error={errors.name} />
-          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6b7280", fontSize: 12 }}>
-            <span>🔒</span><span>Your card details are encrypted & secure via Stripe</span>
-          </div>
-        </div>
-      )}
-
-      {/* UPI form */}
-      {method === "upi" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-            {["GPay", "PhonePe", "Paytm", "BHIM"].map(a => (
-              <span key={a} style={{ padding: "4px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, fontSize: 12, fontWeight: 700, color: "#16a34a" }}>{a}</span>
-            ))}
-          </div>
-          <Field label="UPI ID" id="upi" placeholder="yourname@upi" value={upi}
-            onChange={e => setUpi(e.target.value)} error={errors.upi} />
-        </div>
-      )}
-
-      {/* Net banking */}
-      {method === "netbanking" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Select Bank</label>
-          <select value={bank} onChange={e => setBank(e.target.value)}
-            style={{ padding: "10px 12px", border: `1.5px solid ${errors.bank ? "#ef4444" : "#e5e7eb"}`, borderRadius: 8, fontSize: 14, background: "#fafafa" }}>
-            <option value="">-- Choose your bank --</option>
-            {banks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          {errors.bank && <span style={{ fontSize: 12, color: "#ef4444" }}>{errors.bank}</span>}
-        </div>
-      )}
-
-      {/* COD */}
-      {method === "cod" && (
-        <div style={{ padding: "16px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10, fontSize: 14, color: "#92400e" }}>
-          💵 You will pay <b>{fmt(total)}</b> in cash upon delivery.
-          {subtotal < 999 && (
-            <span> (includes <b>₹49 delivery charge</b>)</span>
+          {i < steps.length - 1 && (
+            <div style={{ width: 60, height: 2, background: i < current ? "#16a34a" : "#e5e5e5", margin: "0 4px", marginBottom: 18, transition: ".3s" }} />
           )}
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      <button onClick={handlePay} disabled={loading}
+// ── Input component ───────────────────────────────────────────────────────────
+function Field({ label, value, onChange, placeholder, type = "text", error, required }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+        {label} {required && <span style={{ color: "#e11d48" }}>*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={{
-          marginTop: 24, width: "100%", padding: "13px 0",
-          background: loading ? "#9ca3af" : "#16a34a", color: "#fff", border: "none",
-          borderRadius: 10, cursor: loading ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 15,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8
-        }}>
-        {loading ? (
-          <><Spinner /> Processing…</>
-        ) : (
-          <>🔒 Pay {fmt(total)}</>
-        )}
-      </button>
-
-      <p style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", marginTop: 12 }}>
-        Secured by <b>Stripe</b> · 256-bit SSL encryption
-      </p>
-    </Card>
+          width: "100%", padding: "11px 14px",
+          border: `1.5px solid ${error ? "#e11d48" : focused ? "#111" : "#ddd"}`,
+          borderRadius: 8, fontSize: 14, outline: "none",
+          background: focused ? "#fafafa" : "#fff",
+          transition: ".2s", boxSizing: "border-box",
+          color: "#111",
+        }}
+      />
+      {error && <p style={{ color: "#e11d48", fontSize: 12, marginTop: 4 }}>{error}</p>}
+    </div>
   );
 }
 
-function Spinner() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" style={{ animation: "spin 1s linear infinite" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <circle cx="9" cy="9" r="7" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" fill="none" />
-      <path d="M9 2a7 7 0 0 1 7 7" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// ─── STEP 3: Confirmation ─────────────────────────────────────────────────────
-function ConfirmationStep({ orderId, address, total, onContinue }) {
-  return (
-    <Card style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 64, marginBottom: 12, animation: "pop .4s ease" }}>
-        <style>{`@keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}`}</style>
-        ✅
-      </div>
-      <h2 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 800, color: "#16a34a" }}>Order Placed!</h2>
-      <p style={{ color: "#6b7280", fontSize: 14, margin: "0 0 20px" }}>
-        Thank you! Your order has been confirmed.<br />You'll receive a confirmation SMS shortly.
-      </p>
-      <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "16px 20px", marginBottom: 20, textAlign: "left" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>Order ID</span>
-          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 800 }}>#{orderId}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>Amount Paid</span>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt(total)}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>Deliver To</span>
-          <span style={{ fontSize: 13, color: "#374151", textAlign: "right", maxWidth: 180 }}>{address.name}, {address.city}</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button onClick={() => onContinue("/orders")}
-          style={{ padding: "12px", background: theme.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 15 }}>
-          View My Orders
-        </button>
-        <button onClick={() => onContinue("/home")}
-          style={{ padding: "11px", background: "none", color: theme.primary, border: `1.5px solid ${theme.primary}`, borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-          Continue Shopping
-        </button>
-      </div>
-    </Card>
-  );
-}
-
-// ─── MAIN CheckoutPage ────────────────────────────────────────────────────────
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);           // 1=address, 2=payment, 3=confirm
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [payLoading, setPayLoading] = useState(false);
-  const [address, setAddress] = useState(null);
-  const [orderId, setOrderId] = useState(null);
-  const [toast, setToast] = useState(null);
 
-  const showToast = (msg, color = "#ef4444") => {
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [step, setStep]         = useState(1); // 1=details, 2=payment
+  const [bagItems, setBagItems] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [placing, setPlacing]   = useState(false);
+  const [toast, setToast]       = useState(null);
+
+  // User details
+  const [phone, setPhone]           = useState("");
+  const [name, setName]             = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [city, setCity]             = useState("");
+  const [state, setState]           = useState("");
+  const [pincode, setPincode]       = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+
+  // Errors
+  const [errors, setErrors] = useState({});
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  const showToast = (msg, color = "#16a34a") => {
     setToast({ msg, color });
     setTimeout(() => setToast(null), 3000);
   };
 
+  // ── Auth guard ───────────────────────────────────────────────────────────
   useEffect(() => {
     const token = getToken();
-    if (!token) { navigate("/login"); return; }
+    // if (!token) { navigate("/login"); return; }
+    if (!token) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+    // Pre-fill from stored user data
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.name)  setName(user.name);
+    if (user.phone) setPhone(user.phone);
+
+    // Fetch bag
     fetch(`${API}/bag`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+      .then(data => {
+        const items = Array.isArray(data) ? data : [];
+        if (items.length === 0) { navigate("/bag"); return; }
+        setBagItems(items);
+        setLoading(false);
+      })
+      .catch(() => { setLoading(false); navigate("/bag"); });
 
-  const subtotal = items.reduce((sum, i) => sum + ((i.sale_price ?? i.base_price) * i.quantity), 0);
+    // Fetch saved address if exists
+    fetch(`${API}/user/address`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.address_line) setAddressLine(data.address_line);
+        if (data?.city)         setCity(data.city);
+        if (data?.state)        setState(data.state);
+        if (data?.pincode)      setPincode(data.pincode);
+        if (data?.phone)        setPhone(data.phone);
+      })
+      .catch(() => {});
+  }, [navigate]);
 
-  // ✅ FIX: ₹49 delivery if subtotal < ₹999, FREE if subtotal >= ₹999
-  const shipping = subtotal >= 999 ? 0 : 49;
+  // ── Price calculations ───────────────────────────────────────────────────
+  const subtotal = bagItems.reduce(
+    (sum, i) => sum + ((i.sale_price ?? i.base_price) * i.quantity), 0
+  );
+  const shipping = subtotal > 999 ? 0 : 99;
+  const total    = subtotal + shipping;
 
-  const total = subtotal + shipping;
+  // ── Validate Step 1 ──────────────────────────────────────────────────────
+  const validateDetails = () => {
+    const e = {};
+    if (!name.trim())        e.name        = "Name is required";
+    if (!phone.trim())       e.phone       = "Phone number is required";
+    else if (!/^[6-9]\d{9}$/.test(phone.trim())) e.phone = "Enter valid 10-digit phone number";
+    if (!addressLine.trim()) e.addressLine = "Address is required";
+    if (!city.trim())        e.city        = "City is required";
+    if (!state.trim())       e.state       = "State is required";
+    if (!pincode.trim())     e.pincode     = "Pincode is required";
+    else if (!/^\d{6}$/.test(pincode.trim())) e.pincode = "Enter valid 6-digit pincode";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-  const handleAddress = (addr) => { setAddress(addr); setStep(2); window.scrollTo(0, 0); };
+  const handleContinue = () => {
+    if (validateDetails()) setStep(2);
+  };
 
-  const handlePay = async (paymentInfo) => {
-    setPayLoading(true);
+  // ── Place Order ──────────────────────────────────────────────────────────
+  const handlePlaceOrder = async () => {
+    const token = getToken();
+    if (!token) { navigate("/login"); return; }
+
+    setPlacing(true);
     try {
-      const token = getToken();
-      // 1. Create Stripe PaymentIntent on backend
-      const intentRes = await fetch(`${API}/payments/create-intent`, {
+      const res = await fetch(`${API}/orders`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Math.round(total * 100), currency: "inr" })
-      });
-      const { clientSecret, error: intentError } = await intentRes.json();
-      if (intentError) throw new Error(intentError);
-
-      // 2. Simulate Stripe confirmation (in production use stripe.confirmCardPayment)
-      await new Promise(r => setTimeout(r, 1200));
-
-      // 3. Place order on backend
-      const orderRes = await fetch(`${API}/orders`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          items,
-          address,
-          payment: { method: paymentInfo.method, status: "paid" },
+          name,
+          phone,
+          address: {
+            address_line: addressLine,
+            city,
+            state,
+            pincode,
+          },
+          payment_method: paymentMethod,
+          items: bagItems.map(i => ({
+            variant_id: i.variant_id,
+            quantity:   i.quantity,
+            price:      i.sale_price ?? i.base_price,
+          })),
           subtotal,
           shipping,
-          total
-        })
+          total,
+        }),
       });
-      const orderData = await orderRes.json();
-      if (!orderRes.ok) throw new Error(orderData.message || "Order failed");
 
-      setOrderId(orderData.orderId || orderData.id || "ORD" + Date.now());
-      setStep(3);
-      window.scrollTo(0, 0);
-    } catch (err) {
-      showToast(err.message || "Payment failed. Please try again.");
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || "Order failed. Try again.", "#dc2626");
+        return;
+      }
+
+      const data = await res.json();
+
+      // ── If Razorpay ──────────────────────────────────────────────────────
+      if (paymentMethod === "razorpay" && data.razorpay_order_id) {
+        const options = {
+          key:    data.razorpay_key,
+          amount: data.amount,
+          currency: "INR",
+          name: "TheZuro",
+          description: "Order Payment",
+          order_id: data.razorpay_order_id,
+          handler: async (response) => {
+            // Verify payment
+            const vRes = await fetch(`${API}/orders/verify-payment`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ ...response, order_id: data.order_id }),
+            });
+            if (vRes.ok) {
+              navigate("/order-success", { state: { orderId: data.order_id } });
+            } else {
+              showToast("Payment verification failed", "#dc2626");
+            }
+          },
+          prefill: { name, contact: phone },
+          theme:  { color: "#111" },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        return;
+      }
+
+      // ── COD success ───────────────────────────────────────────────────────
+      navigate("/order-success", { state: { orderId: data.order_id || data.id } });
+
+    } catch {
+      showToast("Something went wrong. Please try again.", "#dc2626");
     } finally {
-      setPayLoading(false);
+      setPlacing(false);
     }
   };
 
-  if (loading) return <p style={{ padding: 40, textAlign: "center" }}>Loading…</p>;
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#888", fontSize: 16 }}>Loading checkout…</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", padding: "20px 16px" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f8f8", fontFamily: "Arial, sans-serif" }}>
 
+      {/* TOAST */}
       {toast && (
         <div style={{
           position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)",
-          background: toast.color, color: "#fff", padding: "10px 22px",
+          background: toast.color, color: "#fff", padding: "12px 24px",
           borderRadius: 8, zIndex: 9999, fontSize: 14, fontWeight: 600,
-          boxShadow: "0 4px 16px rgba(0,0,0,0.2)", whiteSpace: "nowrap"
-        }}>{toast.msg}</div>
+          boxShadow: "0 4px 12px rgba(0,0,0,.2)", whiteSpace: "nowrap",
+        }}>
+          {toast.msg}
+        </div>
       )}
 
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          {step < 3 && (
-            <button onClick={() => step === 1 ? navigate("/bag") : setStep(s => s - 1)}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#6b7280", padding: "0 2px" }}>←</button>
-          )}
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
-            {step === 1 ? "Checkout" : step === 2 ? "Payment" : "Order Confirmed"}
-          </h1>
-        </div>
+      {/* HEADER */}
+      <div style={{
+        background: "#fff", borderBottom: "1px solid #eee",
+        padding: "16px 40px", display: "flex", alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111" }}>
+          🛒 Checkout
+        </h1>
+        <span
+          onClick={() => navigate("/bag")}
+          style={{ fontSize: 13, color: "#666", cursor: "pointer", textDecoration: "underline" }}
+        >
+          ← Back to Bag
+        </span>
+      </div>
 
-        <Steps current={step === 3 ? 3 : step} />
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
 
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
-          {/* Main content */}
+        {/* STEP BAR */}
+        <StepBar current={step} />
+
+        <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "flex-start" }}>
+
+          {/* ── LEFT: FORM ── */}
           <div style={{ flex: 1, minWidth: 300 }}>
-            {step === 1 && <AddressStep onNext={handleAddress} />}
-            {step === 2 && (
-              <PaymentStep
-                total={total}
-                subtotal={subtotal}
-                onBack={() => setStep(1)}
-                onPay={handlePay}
-                loading={payLoading}
-              />
+
+            {/* ── STEP 1: Details ── */}
+            {step === 1 && (
+              <div style={{ background: "#fff", borderRadius: 14, padding: 28, boxShadow: "0 2px 12px rgba(0,0,0,.07)" }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111", marginBottom: 24 }}>
+                  📋 Delivery Details
+                </h2>
+
+                <Field label="Full Name"     value={name}        onChange={setName}        placeholder="e.g. Rahul Sharma"      error={errors.name}        required />
+                <Field label="Phone Number"  value={phone}       onChange={setPhone}       placeholder="10-digit mobile number" error={errors.phone}       required type="tel" />
+                <Field label="Address Line"  value={addressLine} onChange={setAddressLine} placeholder="House no., Street, Area" error={errors.addressLine} required />
+
+                <div style={{ display: "flex", gap: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <Field label="City"    value={city}    onChange={setCity}    placeholder="e.g. Mumbai"   error={errors.city}    required />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Field label="State"   value={state}   onChange={setState}   placeholder="e.g. Maharashtra" error={errors.state}  required />
+                  </div>
+                </div>
+
+                <Field label="Pincode" value={pincode} onChange={setPincode} placeholder="6-digit pincode" error={errors.pincode} required type="tel" />
+
+                <button
+                  onClick={handleContinue}
+                  style={{
+                    width: "100%", padding: "14px 0",
+                    background: "#111", color: "#fff",
+                    border: "none", borderRadius: 10,
+                    fontSize: 15, fontWeight: 700, cursor: "pointer",
+                    marginTop: 8, transition: ".2s",
+                  }}
+                  onMouseEnter={e => e.target.style.background = "#333"}
+                  onMouseLeave={e => e.target.style.background = "#111"}
+                >
+                  Continue to Payment →
+                </button>
+              </div>
             )}
-            {step === 3 && <ConfirmationStep orderId={orderId} address={address} total={total} onContinue={navigate} />}
+
+            {/* ── STEP 2: Payment ── */}
+            {step === 2 && (
+              <div style={{ background: "#fff", borderRadius: 14, padding: 28, boxShadow: "0 2px 12px rgba(0,0,0,.07)" }}>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+                  <span
+                    onClick={() => setStep(1)}
+                    style={{ fontSize: 13, color: "#666", cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    ← Edit Details
+                  </span>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111" }}>
+                    💳 Payment Method
+                  </h2>
+                </div>
+
+                {/* Delivery address recap */}
+                <div style={{
+                  background: "#f8f8f8", borderRadius: 10,
+                  padding: "14px 16px", marginBottom: 24,
+                  border: "1px solid #eee",
+                }}>
+                  <p style={{ fontSize: 13, color: "#555", margin: 0, lineHeight: 1.7 }}>
+                    <b style={{ color: "#111" }}>📍 Delivering to:</b><br />
+                    {name} | {phone}<br />
+                    {addressLine}, {city}, {state} – {pincode}
+                  </p>
+                </div>
+
+                {/* Payment options */}
+                {[
+                  { id: "cod",      label: "💵 Cash on Delivery",   sub: "Pay when your order arrives" },
+                  { id: "razorpay", label: "💳 Pay Online (Razorpay)", sub: "UPI, Card, Net Banking" },
+                ].map(opt => (
+                  <div
+                    key={opt.id}
+                    onClick={() => setPaymentMethod(opt.id)}
+                    style={{
+                      border: `2px solid ${paymentMethod === opt.id ? "#111" : "#e5e5e5"}`,
+                      borderRadius: 10, padding: "14px 16px",
+                      marginBottom: 12, cursor: "pointer",
+                      background: paymentMethod === opt.id ? "#f5f5f5" : "#fff",
+                      transition: ".2s",
+                      display: "flex", alignItems: "center", gap: 14,
+                    }}
+                  >
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      border: `2px solid ${paymentMethod === opt.id ? "#111" : "#ccc"}`,
+                      background: paymentMethod === opt.id ? "#111" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      {paymentMethod === opt.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff" }} />}
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#111" }}>{opt.label}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: "#888" }}>{opt.sub}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={placing}
+                  style={{
+                    width: "100%", padding: "15px 0",
+                    background: placing ? "#999" : "#111",
+                    color: "#fff", border: "none", borderRadius: 10,
+                    fontSize: 16, fontWeight: 700,
+                    cursor: placing ? "not-allowed" : "pointer",
+                    marginTop: 16, transition: ".2s",
+                  }}
+                  onMouseEnter={e => { if (!placing) e.target.style.background = "#333"; }}
+                  onMouseLeave={e => { if (!placing) e.target.style.background = "#111"; }}
+                >
+                  {placing
+                    ? "Placing Order..."
+                    : paymentMethod === "cod"
+                    ? "✅ Place Order (COD)"
+                    : "🔒 Pay ₹" + total.toFixed(0) + " Securely"}
+                </button>
+
+                <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginTop: 14 }}>
+                  🔒 100% Secure Checkout
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Order summary (only during address + payment) */}
-          {step < 3 && (
-            <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
-          )}
+          {/* ── RIGHT: Order Summary ── */}
+          <div style={{
+            width: 300, background: "#fff", borderRadius: 14,
+            padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,.07)",
+            position: "sticky", top: 90,
+          }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 18, color: "#111" }}>
+              Order Summary
+            </h3>
+
+            {/* Items */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
+              {bagItems.map(item => (
+                <div key={item.id} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div style={{
+                    width: 52, height: 58, borderRadius: 8,
+                    background: "#f5f5f5", overflow: "hidden", flexShrink: 0,
+                  }}>
+                    {item.image_url
+                      ? <img src={item.image_url} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🛍️</div>
+                    }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#111", lineHeight: 1.3 }}>
+                      {item.title}
+                    </p>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#888" }}>
+                      Qty: {item.quantity} × ₹{item.sale_price ?? item.base_price}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>
+                    ₹{((item.sale_price ?? item.base_price) * item.quantity).toFixed(0)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "14px 0" }} />
+
+            {/* Price breakdown */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#666" }}>Subtotal ({bagItems.length} items)</span>
+                <span>₹{subtotal.toFixed(2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#666" }}>Shipping</span>
+                <span style={{ color: shipping === 0 ? "#16a34a" : "#111" }}>
+                  {shipping === 0 ? "FREE 🎉" : `₹${shipping}`}
+                </span>
+              </div>
+              {shipping > 0 && (
+                <p style={{ margin: 0, fontSize: 12, color: "#16a34a" }}>
+                  Add ₹{(999 - subtotal).toFixed(0)} more for free shipping!
+                </p>
+              )}
+            </div>
+
+            <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "14px 0" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 17 }}>
+              <span>Total</span>
+              <span>₹{total.toFixed(2)}</span>
+            </div>
+
+            {shipping === 0 && (
+              <div style={{
+                marginTop: 14, background: "#f0fdf4", borderRadius: 8,
+                padding: "10px 14px", border: "1px solid #bbf7d0",
+              }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                  ✅ You saved ₹99 on shipping!
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Mobile responsive */}
+      <style>{`
+        @media (max-width: 768px) {
+          .checkout-layout { flex-direction: column !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import theme from "./theme";
 
-const API = "https://api.thezuro.com/api/auth";
+const API = "http://localhost:5000/api/auth";
 
 const TOKEN = {
   black:    "#0a0a0a",

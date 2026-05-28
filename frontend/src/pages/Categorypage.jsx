@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-const API = "https://api.thezuro.com/api";
+const API = "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
 
 // ── Category config — name, slug, hero bg, headline ──────────────────────

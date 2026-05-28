@@ -82,7 +82,7 @@ export default function ContactUs() {
     try {
   
       const response = await fetch(
-        "https://api.thezuro.com/api/contact/send-email",
+        "http://localhost:5000/api/contact/send-email",
         {
           method: "POST",
           headers: {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import theme from "./theme";
 
 
-const API = "https://api.thezuro.com/api/auth";
+const API = "http://localhost:5000/api/auth";
 const G   = "linear-gradient(135deg, rgb(148,0,211), rgb(237,128,233))";
 const gradText = {
   background: G,

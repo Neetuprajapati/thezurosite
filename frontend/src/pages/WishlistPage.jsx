@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import theme from "./theme";
 
-const API = "https://api.thezuro.com/api";
+const API = "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
 
 const StarIcon = () => (
@@ -24,7 +24,12 @@ export default function WishlistPage() {
 
   const fetchWishlist = () => {
     const token = getToken();
-    if (!token) { navigate("/login"); return; }
+    // if (!token) { navigate("/login"); return; }
+    if (!token) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
 
     fetch(`${API}/wishlist`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())

@@ -6,7 +6,7 @@ export default function Signup({ goLogin }) {
   const [data, setData] = useState({});
 
   const submit = async () => {
-    const res = await axios.post("https://api.thezuro.com/signup", data);
+    const res = await axios.post("http://localhost:5000/signup", data);
     alert(res.data.message);
   };
 
