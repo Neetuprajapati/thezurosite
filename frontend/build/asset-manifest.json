@@ -1,14 +1,14 @@
 {
   "files": {
     "main.css": "/static/css/main.e6c13ad2.css",
-    "main.js": "/static/js/main.d81bfc97.js",
+    "main.js": "/static/js/main.cca620de.js",
     "static/media/thezurologo.png": "/static/media/thezurologo.aa93abf96f7d1419f5d9.png",
     "index.html": "/index.html",
     "main.e6c13ad2.css.map": "/static/css/main.e6c13ad2.css.map",
-    "main.d81bfc97.js.map": "/static/js/main.d81bfc97.js.map"
+    "main.cca620de.js.map": "/static/js/main.cca620de.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.d81bfc97.js"
+    "static/js/main.cca620de.js"
   ]
 }
