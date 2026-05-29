@@ -1,7 +1,8 @@
+import { image } from "framer-motion/client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+const API = `${process.env.REACT_APP_API_URL}/api`;
 const getToken = () => localStorage.getItem("token");
 
 const StarIcon = () => (
@@ -24,6 +25,39 @@ const BagIcon = () => (
   </svg>
 );
 
+// ── Video with image fallback ──
+const VideoWithFallback = ({ src, fallback, alt, imgPosition }) => {
+  const [videoFailed, setVideoFailed] = useState(false);
+
+  if (videoFailed) {
+    return (
+      <img
+        src={fallback}
+        alt={alt}
+        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", objectPosition: imgPosition }}
+      />
+    );
+  }
+
+  return (
+    <video
+      key={src}
+      autoPlay
+      muted
+      loop
+      playsInline
+      onError={() => setVideoFailed(true)}
+      style={{
+        width:"100%", height:"100%",
+        objectFit:"cover", display:"block",
+        objectPosition: imgPosition,
+      }}
+    >
+      <source src={src} type="video/mp4" onError={() => setVideoFailed(true)} />
+    </video>
+  );
+};
+
 const sortOptions = ["Relevance", "Price: Low to High", "Price: High to Low", "Rating"];
 
 const getPrimaryImage = (media) => {
@@ -35,9 +69,7 @@ const getPrimaryImage = (media) => {
 };
 
 // ─────────────────────────────────────────────────────────
-//  HERO SLIDES — curated high-quality Unsplash images
-//  Each URL is pinned to a specific photo ID so it never
-//  changes. ?auto=format serves AVIF/WebP automatically.
+//  HERO SLIDES — images + video
 // ─────────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
@@ -46,17 +78,16 @@ const HERO_SLIDES = [
     sub: "Premium fashion curated for the bold",
     bg: "linear-gradient(135deg,#0a0a0a 0%,#1a1a2e 100%)",
     accent: "#c9a84c",
-    // Sharp-dressed man in navy suit, editorial feel
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=90&auto=format&fit=crop&crop=top",
+    image: "/Brown Modern Fashion New Collection Tumblr Banner.png",
     imgPosition: "center top",
   },
   {
-    label: "PICK YOUR SCENT",
-    headline: "Luxury\nPerfumes",
-    sub: "Signature fragrances for every occasion",
+    label: "",
+    headline: "",
+    sub: "",
     bg: "linear-gradient(135deg,#1a0810 0%,#2e0f22 100%)",
     accent: "#e8c5a0",
-    // Elegant perfume bottle flat-lay on dark background
+    video: "/perfume.mp4",
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=800&q=90&auto=format&fit=crop&crop=center",
     imgPosition: "center center",
   },
@@ -66,7 +97,6 @@ const HERO_SLIDES = [
     sub: "Walk bold — shoes that make a statement",
     bg: "linear-gradient(135deg,#0a0f1a 0%,#0d1e38 100%)",
     accent: "#6ba3d6",
-    // Clean white sneaker on minimal dark background
     image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=90&auto=format&fit=crop&crop=center",
     imgPosition: "center center",
   },
@@ -76,7 +106,6 @@ const HERO_SLIDES = [
     sub: "Discover the new women's collection",
     bg: "linear-gradient(135deg,#160808 0%,#2e1010 100%)",
     accent: "#f5c6c6",
-    // Fashion editorial — woman in elegant dress
     image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&q=90&auto=format&fit=crop&crop=top",
     imgPosition: "center top",
   },
@@ -199,7 +228,7 @@ export default function HomePage() {
     }
   }, [navigate]);
 
-  // ── filter + sort (no category filter) ──
+  // ── filter + sort ──
   let filtered = products.filter(p => (p.sale_price ?? p.base_price ?? 0) <= priceRange);
   if (sortBy === "Price: Low to High")
     filtered = [...filtered].sort((a, b) => (a.sale_price ?? a.base_price) - (b.sale_price ?? b.base_price));
@@ -248,12 +277,15 @@ export default function HomePage() {
           box-shadow: 0 0 0 3px rgba(201,168,76,.2);
         }
 
-        /* ── hero image panel ── */
+        /* ── hero image / video panel ── */
         .dot-btn { transition: all .3s ease; border:none; cursor:pointer; padding:0; }
         .hero-img-wrap { overflow:hidden; }
         .hero-img-wrap img {
           width:100%; height:100%; object-fit:cover; display:block;
           transition: transform 7s ease, opacity .45s ease;
+        }
+        .hero-img-wrap video {
+          width:100%; height:100%; object-fit:cover; display:block;
         }
         .hero-img-wrap:hover img { transform: scale(1.05); }
       `}</style>
@@ -284,21 +316,33 @@ export default function HomePage() {
           backgroundImage:"repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 80px)",
         }} />
 
-        {/* ── RIGHT photo ── */}
+        {/* ── RIGHT photo / video ── */}
         <div
           className="hero-img-wrap"
           style={{
             position:"absolute", right:0, top:0,
-            width:"52%", height:"100%",
+            width:"100%", height:"100%",
             opacity: heroAnim ? 1 : 0,
             transition:"opacity .45s ease",
           }}
         >
-          <img
-            src={slide.image}
-            alt={slide.label}
-            style={{ objectPosition: slide.imgPosition }}
-          />
+          {/* VIDEO slide */}
+          {slide.video ? (
+            <VideoWithFallback
+              src={slide.video}
+              fallback={slide.image}
+              alt={slide.label}
+              imgPosition={slide.imgPosition}
+            />
+          ) : (
+            /* IMAGE slide */
+            <img
+              src={slide.image}
+              alt={slide.label}
+              style={{ objectPosition: slide.imgPosition }}
+            />
+          )}
+
           {/* gradient blend: left edge fades into dark bg */}
           <div style={{
             position:"absolute", inset:0, pointerEvents:"none",
@@ -375,7 +419,7 @@ export default function HomePage() {
       </div>
 
       {/* ════════════════════════════════════════
-          FILTER BAR  (category tabs removed)
+          FILTER BAR
       ════════════════════════════════════════ */}
       <div style={{
         background:"#fff", borderBottom:"1px solid #ebebeb",
