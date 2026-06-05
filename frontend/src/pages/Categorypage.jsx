@@ -114,10 +114,14 @@ export default function CategoryPage() {
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
         const all = Array.isArray(data) ? data : [];
+        console.log("🔍 API Products:", all);
+        console.log("🎯 Expected Category:", config?.apiCategory);
+        console.log("📊 Available Categories:", [...new Set(all.map(p => p.category))]);
         // Filter by category name (case-insensitive)
         const filtered = all.filter(p =>
           p.category?.toLowerCase() === config?.apiCategory?.toLowerCase()
         );
+        console.log("✅ Filtered Products:", filtered);
         setProducts(filtered);
         setLoading(false);
       })
