@@ -1,6 +1,7 @@
 import ZuroHeader from "./Zuroheader";
 import { Outlet } from "react-router-dom";
 import BottomNav from "./BottomNav";
+import ChatbotWidget from "./ChatbotWidget";
 
 export default function Layout() {
   return (
@@ -11,6 +12,7 @@ export default function Layout() {
       {/* 👇 PAGE CONTENT HERE */}
       <Outlet />
       <BottomNav />
+      <ChatbotWidget />
     </>
   );
 }

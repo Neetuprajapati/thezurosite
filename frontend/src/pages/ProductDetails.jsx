@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { API_URL } from "../config/api";
 
-const API = "http://localhost:5000/api";
+const API = API_URL;
 const getToken = () => localStorage.getItem("token");
 
 export default function ProductDetails() {

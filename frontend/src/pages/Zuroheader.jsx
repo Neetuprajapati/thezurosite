@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assest/logo/thezurologo.png";
+import { API_URL } from "../config/api";
 
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -77,9 +78,7 @@ export default function LuxuryHeader() {
 
   // ── Load all products once ──────────────────────────────────
   useEffect(() => {
-    fetch("https://api.thezuro.com/api/products")
-    // fetch("http://localhost:5000/api/products")
-
+    fetch(`${API_URL}/products`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
         setAllProducts(Array.isArray(data) ? data : []);

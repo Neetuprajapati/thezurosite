@@ -1,12 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
 import theme from "./theme";
+import { API_BASE_URL } from "../config/api";
 
 export default function Signup({ goLogin }) {
   const [data, setData] = useState({});
 
   const submit = async () => {
-    const res = await axios.post("http://localhost:5000/signup", data);
+    const res = await axios.post(`${API_BASE_URL}/signup`, data);
     alert(res.data.message);
   };
 

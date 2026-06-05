@@ -57,13 +57,12 @@ const ZuroLogoSmall = () => (
 );
 
 // Each tab maps to a real route from App.jsx.
-// "browse" and "notifications" don't have dedicated routes yet, so they fall
-// back to /home — update the path when you add those pages.
+// "browse" still falls back to /home until a dedicated page is added.
 const mobileTabs = [
   { id: "home",          label: "Home",          path: "/home",          Icon: HomeIcon },
   { id: "browse",        label: "Browse",        path: "/home",          Icon: BrowseIcon },       // update when /browse exists
   { id: "profile",       label: "Profile",       path: "/profile",       Icon: ProfileIcon },
-  { id: "notifications", label: "Alerts",        path: "/home",          Icon: BellIcon },         // update when /notifications exists
+  { id: "notifications", label: "Alerts",        path: "/track-orders",  Icon: BellIcon },
   { id: "bag",           label: "Bag",           path: "/bag",           Icon: BagIcon },
 ];
 
@@ -71,6 +70,7 @@ const mobileTabs = [
 const pathToTab = {
   "/home":    "home",
   "/profile": "profile",
+  "/track-orders": "notifications",
   "/bag":     "bag",
   "/wishlist": "home",   // wishlist has its own page but no bottom tab — falls back to home highlight
 };
@@ -87,13 +87,24 @@ const policies = [
   { label: "Privacy Policy", path: "/privacy-policy" },
 ];
 
+const shoppingLinks = [
+  { label: "Shop", path: "/home" },
+  { label: "Women", path: "/category/women" },
+  { label: "Men", path: "/category/men" },
+  { label: "Perfume", path: "/category/perfume" },
+  { label: "Shoes", path: "/category/shoes" },
+  { label: "New Arrivals", path: "/home" },
+];
+
 export default function BottomNav() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+  const isMobile = viewportWidth <= 768;
+  const isCompactMobile = viewportWidth <= 390;
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    const onResize = () => setViewportWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -105,16 +116,17 @@ export default function BottomNav() {
   if (isMobile) {
     return (
       <>
-        <div style={{ height: 68 }} />
+        <div style={{ height: "calc(68px + env(safe-area-inset-bottom, 0px))" }} />
         <nav style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, height: 60,
+          position: "fixed", bottom: 0, left: 0, right: 0,
+          minHeight: 62,
           background: "#ffffff",
           borderTop: `1px solid ${theme.lightPurple}`,
           boxShadow: "0 -2px 12px rgba(148,0,211,0.10)",
-          display: "flex", alignItems: "center", justifyContent: "space-around",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
           zIndex: 9999,
           fontFamily: "'Helvetica Neue', Arial, sans-serif",
-          padding: "0 4px",
+          padding: `4px ${isCompactMobile ? 2 : 6}px calc(4px + env(safe-area-inset-bottom, 0px))`,
         }}>
           {mobileTabs.map(({ id, label, Icon, path }) => {
             const isActive = active === id;
@@ -125,7 +137,8 @@ export default function BottomNav() {
                 style={{
                   background: "none", border: "none", cursor: "pointer",
                   display: "flex", flexDirection: "column", alignItems: "center",
-                  justifyContent: "center", gap: 2, flex: 1, padding: "4px 0",
+                  justifyContent: "center", gap: 2, flex: 1, minWidth: 0,
+                  padding: isCompactMobile ? "3px 0" : "4px 0",
                   position: "relative",
                 }}
               >
@@ -139,15 +152,22 @@ export default function BottomNav() {
                 )}
                 <span style={{
                   position: "relative", display: "flex", alignItems: "center",
-                  justifyContent: "center", width: 34, height: 34, borderRadius: "50%",
+                  justifyContent: "center",
+                  width: isCompactMobile ? 30 : 34,
+                  height: isCompactMobile ? 30 : 34,
+                  borderRadius: "50%",
                   background: isActive ? `${theme.lightPurple}55` : "transparent",
                 }}>
                   <Icon active={isActive} />
                 </span>
                 <span style={{
-                  fontSize: 10,
+                  fontSize: isCompactMobile ? 9 : 10,
                   fontWeight: isActive ? 700 : 400,
                   color: isActive ? theme.primary : "#999",
+                  width: "100%",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}>{label}</span>
               </button>
             );
@@ -172,11 +192,11 @@ export default function BottomNav() {
           <div>
             <h4 style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: 1, margin: "0 0 14px" }}>ONLINE SHOPPING</h4>
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-              {["Shop","Women","Men","Perfume","Shoes","New Arrivals"].map(l => (
-                <li key={l}>
-                  <a href="#" style={{ fontSize: 13, color: theme.footerText, textDecoration: "none" }}
+              {shoppingLinks.map(item => (
+                <li key={item.label}>
+                  <Link to={item.path} style={{ fontSize: 13, color: theme.footerText, textDecoration: "none" }}
                     onMouseEnter={e => e.target.style.color = theme.primary}
-                    onMouseLeave={e => e.target.style.color = theme.footerText}>{l}</a>
+                    onMouseLeave={e => e.target.style.color = theme.footerText}>{item.label}</Link>
                 </li>
               ))}
             </ul>

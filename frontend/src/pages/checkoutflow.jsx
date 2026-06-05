@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { API_URL } from "../config/api";
 
-const API = "http://localhost:5000/api";
+const API = API_URL;
 const getToken = () => localStorage.getItem("token");
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -68,9 +69,11 @@ function Field({ label, value, onChange, placeholder, type = "text", error, requ
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [step, setStep]         = useState(1); // 1=details, 2=payment
+  const initialStep = location.state?.startStep === 2 ? 2 : 1;
+  const [step, setStep]         = useState(initialStep); // 1=details, 2=payment
   const [bagItems, setBagItems] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [placing, setPlacing]   = useState(false);
@@ -84,6 +87,13 @@ export default function CheckoutPage() {
   const [state, setState]           = useState("");
   const [pincode, setPincode]       = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [upiRef, setUpiRef] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [qrSecondsLeft, setQrSecondsLeft] = useState(120);
+  const [qrSeed, setQrSeed] = useState(Date.now());
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
 
   // Errors
   const [errors, setErrors] = useState({});
@@ -99,7 +109,7 @@ export default function CheckoutPage() {
     const token = getToken();
     // if (!token) { navigate("/login"); return; }
     if (!token) {
-      setItems([]);
+      setBagItems([]);
       setLoading(false);
       return;
     }
@@ -123,6 +133,7 @@ export default function CheckoutPage() {
     fetch(`${API}/user/address`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
+        if (data?.full_name)    setName(data.full_name);
         if (data?.address_line) setAddressLine(data.address_line);
         if (data?.city)         setCity(data.city);
         if (data?.state)        setState(data.state);
@@ -138,6 +149,24 @@ export default function CheckoutPage() {
   );
   const shipping = subtotal > 999 ? 0 : 99;
   const total    = subtotal + shipping;
+  const upiParams = `pa=merchant@upi&pn=TheZuro&am=${Math.max(total, 1).toFixed(2)}&cu=INR&tn=TheZuro%20Order&tr=TZ${qrSeed}`;
+  const upiLink = `upi://pay?${upiParams}`;
+  const gpayLink = `tez://upi/pay?${upiParams}`;
+  const phonePeLink = `phonepe://pay?${upiParams}`;
+  const paytmLink = `paytmmp://pay?${upiParams}`;
+  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
+
+  useEffect(() => {
+    if (paymentMethod !== "qr") return;
+    setQrSecondsLeft(120);
+    setUpiRef("");
+
+    const timer = setInterval(() => {
+      setQrSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentMethod, qrSeed]);
 
   // ── Validate Step 1 ──────────────────────────────────────────────────────
   const validateDetails = () => {
@@ -154,14 +183,80 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleContinue = () => {
-    if (validateDetails()) setStep(2);
+  const handleContinue = async () => {
+    if (!validateDetails()) return;
+
+    const token = getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const saveRes = await fetch(`${API}/user/address`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: name,
+          phone,
+          address_line: addressLine,
+          city,
+          state,
+          pincode,
+          label: "Home",
+        }),
+      });
+
+      if (!saveRes.ok) {
+        const err = await saveRes.json().catch(() => ({}));
+        setPaymentError(err.message || "Address save failed. Please try again.");
+        return;
+      }
+
+      setPaymentError("");
+      setStep(2);
+    } catch {
+      setPaymentError("Address save failed. Please check your network.");
+    }
   };
 
   // ── Place Order ──────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     const token = getToken();
     if (!token) { navigate("/login"); return; }
+
+    setPaymentError("");
+
+    if (paymentMethod === "qr" && upiRef.trim().length < 8) {
+      setPaymentError("Please enter valid UTR / transaction reference (min 8 chars) after QR payment.");
+      return;
+    }
+
+    if (paymentMethod === "qr" && qrSecondsLeft <= 0) {
+      setPaymentError("QR expired. Please generate a new QR and complete payment within 2 minutes.");
+      return;
+    }
+
+    if (paymentMethod === "card") {
+      const digits = cardNumber.replace(/\s/g, "");
+      const cardValid = /^\d{16}$/.test(digits);
+      const expiryValid = /^(0[1-9]|1[0-2])\/(\d{2})$/.test(cardExpiry.trim());
+      const cvvValid = /^\d{3}$/.test(cardCvv.trim());
+      if (!cardValid || !expiryValid || !cvvValid) {
+        setPaymentError("Enter valid card number (16 digits), expiry (MM/YY), and CVV (3 digits).");
+        return;
+      }
+    }
+
+    const backendPaymentMethod =
+      paymentMethod === "cod"
+        ? "cod"
+        : paymentMethod === "qr"
+        ? "upi_qr"
+        : "razorpay";
 
     setPlacing(true);
     try {
@@ -180,7 +275,9 @@ export default function CheckoutPage() {
             state,
             pincode,
           },
-          payment_method: paymentMethod,
+          payment_method: backendPaymentMethod,
+          payment_reference: paymentMethod === "qr" ? upiRef.trim() : null,
+          payment_meta: paymentMethod === "card" ? { last4: cardNumber.replace(/\s/g, "").slice(-4), type: "card" } : null,
           items: bagItems.map(i => ({
             variant_id: i.variant_id,
             quantity:   i.quantity,
@@ -201,7 +298,7 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       // ── If Razorpay ──────────────────────────────────────────────────────
-      if (paymentMethod === "razorpay" && data.razorpay_order_id) {
+      if (["gpay", "card"].includes(paymentMethod) && data.razorpay_order_id) {
         const options = {
           key:    data.razorpay_key,
           amount: data.amount,
@@ -217,10 +314,13 @@ export default function CheckoutPage() {
               body: JSON.stringify({ ...response, order_id: data.order_id }),
             });
             if (vRes.ok) {
-              navigate("/order-success", { state: { orderId: data.order_id } });
+              navigate("/order-success", { state: { orderId: data.order_id, status: "success", method: paymentMethod } });
             } else {
-              showToast("Payment verification failed", "#dc2626");
+              navigate("/order-success", { state: { orderId: data.order_id, status: "failed", method: paymentMethod } });
             }
+          },
+          modal: {
+            ondismiss: () => navigate("/order-success", { state: { orderId: data.order_id, status: "failed", method: paymentMethod } }),
           },
           prefill: { name, contact: phone },
           theme:  { color: "#111" },
@@ -230,11 +330,17 @@ export default function CheckoutPage() {
         return;
       }
 
-      // ── COD success ───────────────────────────────────────────────────────
-      navigate("/order-success", { state: { orderId: data.order_id || data.id } });
+      // ── COD / QR success ───────────────────────────────────────────────────
+      navigate("/order-success", {
+        state: {
+          orderId: data.order_id || data.id,
+          status: "success",
+          method: paymentMethod,
+        },
+      });
 
     } catch {
-      showToast("Something went wrong. Please try again.", "#dc2626");
+      setPaymentError("Payment failed. Please try again.");
     } finally {
       setPlacing(false);
     }
@@ -297,7 +403,7 @@ export default function CheckoutPage() {
                   📋 Delivery Details
                 </h2>
 
-                <Field label="Full Name"     value={name}        onChange={setName}        placeholder="e.g. Rahul Sharma"      error={errors.name}        required />
+                <Field label="Full Name"     value={name}        onChange={setName}        placeholder="Enter your name"      error={errors.name}        required />
                 <Field label="Phone Number"  value={phone}       onChange={setPhone}       placeholder="10-digit mobile number" error={errors.phone}       required type="tel" />
                 <Field label="Address Line"  value={addressLine} onChange={setAddressLine} placeholder="House no., Street, Area" error={errors.addressLine} required />
 
@@ -326,6 +432,11 @@ export default function CheckoutPage() {
                 >
                   Continue to Payment →
                 </button>
+                {paymentError && (
+                  <p style={{ color: "#dc2626", fontSize: 12, marginTop: 10 }}>
+                    {paymentError}
+                  </p>
+                )}
               </div>
             )}
 
@@ -360,8 +471,10 @@ export default function CheckoutPage() {
 
                 {/* Payment options */}
                 {[
-                  { id: "cod",      label: "💵 Cash on Delivery",   sub: "Pay when your order arrives" },
-                  { id: "razorpay", label: "💳 Pay Online (Razorpay)", sub: "UPI, Card, Net Banking" },
+                  { id: "qr",    label: "📱 UPI QR Code",      sub: "Scan QR with any UPI app" },
+                  { id: "cod",   label: "💵 Cash on Delivery", sub: "Pay when your order arrives" },
+                  { id: "gpay",  label: "🟢 UPI Apps",        sub: "Google Pay, PhonePe, Paytm" },
+                  { id: "card",  label: "💳 Debit/Credit Card", sub: "Visa, Mastercard, RuPay" },
                 ].map(opt => (
                   <div
                     key={opt.id}
@@ -391,6 +504,123 @@ export default function CheckoutPage() {
                   </div>
                 ))}
 
+                {paymentMethod === "qr" && (
+                  <div style={{
+                    border: "1px solid #e5e5e5",
+                    borderRadius: 12,
+                    padding: 14,
+                    marginTop: 6,
+                    background: "#fafafa",
+                    textAlign: "center",
+                  }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 13, color: "#555" }}>
+                      Scan this QR to pay {`₹${total.toFixed(2)}`} via any UPI app.
+                    </p>
+                    <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: qrSecondsLeft <= 20 ? "#dc2626" : "#1f8f3a" }}>
+                      QR valid for: {String(Math.floor(qrSecondsLeft / 60)).padStart(2, "0")}:{String(qrSecondsLeft % 60).padStart(2, "0")}
+                    </p>
+                    <img src={qrImage} alt="UPI QR Code" style={{ width: 180, height: 180, borderRadius: 10, border: "1px solid #eee" }} />
+                    <input
+                      value={upiRef}
+                      onChange={(e) => setUpiRef(e.target.value.toUpperCase())}
+                      placeholder="Enter UTR / Txn Ref"
+                      style={{
+                        marginTop: 10,
+                        width: "100%",
+                        border: "1px solid #ddd",
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        fontSize: 13,
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <p style={{ margin: "8px 0 0", fontSize: 12, color: "#888" }}>
+                      Scan, pay, then enter UTR and place order within 2 minutes.
+                    </p>
+                    <button
+                      onClick={() => setQrSeed(Date.now())}
+                      style={{
+                        marginTop: 10,
+                        border: "1px solid #111",
+                        background: "#fff",
+                        color: "#111",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Generate New QR (2 min)
+                    </button>
+                  </div>
+                )}
+
+                {paymentMethod === "gpay" && (
+                  <div style={{
+                    border: "1px solid #e5e5e5",
+                    borderRadius: 12,
+                    padding: 14,
+                    marginTop: 6,
+                    background: "#fafafa",
+                  }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 13, color: "#555" }}>
+                      Choose any UPI app for payment.
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <a href={gpayLink} style={{ display: "inline-block", textDecoration: "none", padding: "10px 12px", background: "#1f8f3a", color: "#fff", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
+                        Google Pay
+                      </a>
+                      <a href={phonePeLink} style={{ display: "inline-block", textDecoration: "none", padding: "10px 12px", background: "#5f259f", color: "#fff", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
+                        PhonePe
+                      </a>
+                      <a href={paytmLink} style={{ display: "inline-block", textDecoration: "none", padding: "10px 12px", background: "#00baf2", color: "#002970", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
+                        Paytm
+                      </a>
+                      <a href={upiLink} style={{ display: "inline-block", textDecoration: "none", padding: "10px 12px", background: "#111", color: "#fff", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
+                        Any UPI App
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === "card" && (
+                  <div style={{
+                    border: "1px solid #e5e5e5",
+                    borderRadius: 12,
+                    padding: 14,
+                    marginTop: 6,
+                    background: "#fafafa",
+                  }}>
+                    <input
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value.replace(/[^\d\s]/g, "").slice(0, 19))}
+                      placeholder="Card Number"
+                      style={{ width: "100%", border: "1px solid #ddd", borderRadius: 8, padding: "10px 12px", fontSize: 13, boxSizing: "border-box", marginBottom: 8 }}
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value.replace(/[^\d/]/g, "").slice(0, 5))}
+                        placeholder="MM/YY"
+                        style={{ flex: 1, border: "1px solid #ddd", borderRadius: 8, padding: "10px 12px", fontSize: 13, boxSizing: "border-box" }}
+                      />
+                      <input
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                        placeholder="CVV"
+                        style={{ flex: 1, border: "1px solid #ddd", borderRadius: 8, padding: "10px 12px", fontSize: 13, boxSizing: "border-box" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {paymentError && (
+                  <p style={{ color: "#dc2626", fontSize: 12, marginTop: 10 }}>
+                    {paymentError}
+                  </p>
+                )}
+
                 <button
                   onClick={handlePlaceOrder}
                   disabled={placing}
@@ -409,7 +639,13 @@ export default function CheckoutPage() {
                     ? "Placing Order..."
                     : paymentMethod === "cod"
                     ? "✅ Place Order (COD)"
-                    : "🔒 Pay ₹" + total.toFixed(0) + " Securely"}
+                    : paymentMethod === "qr"
+                    ? qrSecondsLeft <= 0
+                      ? "⏱ QR Expired - Regenerate QR"
+                      : "✅ Place Order (QR Paid)"
+                    : paymentMethod === "gpay"
+                    ? "🟢 Pay via UPI App"
+                    : "💳 Pay ₹" + total.toFixed(0) + " by Card"}
                 </button>
 
                 <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginTop: 14 }}>

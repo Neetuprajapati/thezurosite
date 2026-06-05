@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
 
       // ---- MOCK (remove when API is ready) ----
       await new Promise((r) => setTimeout(r, 1000));
-      const mockUser = { id: "u1", name: "Rahul Verma", email: identifier, role: "customer" };
+      const mockUser = { id: "u1", name: "Enter your name", email: identifier, role: "customer" };
       const mockToken = "mock_jwt_token_" + Date.now();
       setToken(mockToken);
       setUser(mockUser);
@@ -108,7 +108,7 @@ export function AuthProvider({ children }) {
       // ---- MOCK ----
       await new Promise((r) => setTimeout(r, 800));
       if (purpose === "login") {
-        const mockUser = { id: "u1", name: "Rahul Verma", phone: identifier, role: "customer" };
+        const mockUser = { id: "u1", name: "Enter your name", phone: identifier, role: "customer" };
         setToken("mock_jwt_" + Date.now());
         setUser(mockUser);
       }

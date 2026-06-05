@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import theme from "./theme";
+import { API_URL } from "../config/api";
 
-const API = "http://localhost:5000/api";
+const API = API_URL;
 const getToken = () => localStorage.getItem("token");
 
 const StarIcon = () => (

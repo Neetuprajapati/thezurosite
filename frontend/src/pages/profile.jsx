@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import theme from "./theme";
+import { API_URL } from "../config/api";
 
 const EditIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -71,6 +72,13 @@ export default function ProfilePage() {
   const [loading,   setLoading]   = useState(true);
   const [bagItems,  setBagItems]  = useState([]);
   const [stats,     setStats]     = useState({ totalOrders: 0, wishlistItems: 0, rewardPoints: 0 });
+  const [isMobile, setIsMobile]   = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,9 +86,9 @@ export default function ProfilePage() {
         const token = localStorage.getItem("token");
 
         const [profileRes, statsRes, bagRes] = await Promise.all([
-          fetch("http://localhost:5000/api/user/profile", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/user/stats",   { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/bag",          { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_URL}/user/profile`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_URL}/user/stats`,   { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_URL}/bag`,          { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         const profileData = await profileRes.json();
@@ -103,7 +111,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/user/update", {
+      const res = await fetch(`${API_URL}/user/update`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
@@ -120,11 +128,30 @@ export default function ProfilePage() {
   };
 
   const menuItems = [
-    { icon: <OrderIcon />,   label: "My Orders",       sub: `${bagItems.length} items in bag`,  tab: "orders"   },
-    { icon: <WishlistIcon />,label: "My Wishlist",      sub: `${stats.wishlistItems} saved items`, tab: "overview" },
-    { icon: <AddressIcon />, label: "Saved Addresses",  sub: "Manage your addresses",            tab: "settings" },
-    { icon: <PaymentIcon />, label: "Payment Methods",  sub: "Cards, UPI, Wallets",              tab: "settings" },
-    { icon: <NotifIcon />,   label: "Notifications",    sub: "Manage your alerts",               tab: "settings" },
+    {
+      icon: <OrderIcon />,
+      label: "My Orders",
+      sub: `${bagItems.length} items in bag`,
+      onClick: () => setActiveTab("orders"),
+    },
+    {
+      icon: <WishlistIcon />,
+      label: "My Wishlist",
+      sub: `${stats.wishlistItems} saved items`,
+      onClick: () => navigate("/wishlist"),
+    },
+    {
+      icon: <AddressIcon />,
+      label: "Saved Addresses",
+      sub: "Manage your addresses",
+      onClick: () => { setActiveTab("settings"); setEditMode(true); },
+    },
+    {
+      icon: <PaymentIcon />,
+      label: "Payment Methods",
+      sub: "Cards, UPI, Wallets",
+      onClick: () => navigate("/checkout", { state: { startStep: 2 } }),
+    },
   ];
 
   const tabs = ["overview", "orders", "settings"];
@@ -184,7 +211,7 @@ export default function ProfilePage() {
 
               <button
                 onClick={handleLogout}
-                style={{ background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 8, color: "#fff", padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
+                style={{ background: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 8, color: "#000", padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
                 <LogoutIcon /> Logout
               </button>
             </div>
@@ -227,10 +254,10 @@ export default function ProfilePage() {
 
         {/* OVERVIEW */}
         {activeTab === "overview" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {menuItems.map(({ icon, label, sub, tab }) => (
-                <div key={label} onClick={() => setActiveTab(tab)}
+              {menuItems.map(({ icon, label, sub, onClick }) => (
+                <div key={label} onClick={onClick}
                   style={{ background: theme.white, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", boxShadow: "0 2px 10px rgba(148,0,211,0.06)", border: `1px solid ${theme.lightPurple}44`, transition: "all 0.2s" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.transform = "translateX(4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = `${theme.lightPurple}44`; e.currentTarget.style.transform = "translateX(0)"; }}>
@@ -335,7 +362,7 @@ export default function ProfilePage() {
         {activeTab === "settings" && (
           <div style={{ background: theme.white, borderRadius: 16, padding: 28, boxShadow: "0 2px 16px rgba(148,0,211,0.08)" }}>
             <h3 style={{ fontSize: 14, fontWeight: 800, color: theme.dark, margin: "0 0 20px", letterSpacing: 0.5 }}>PERSONAL INFORMATION</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
               {[
                 { label: "Full Name",     key: "name"   },
                 { label: "Email Address", key: "email"  },

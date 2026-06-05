@@ -1,8 +1,9 @@
 import { useState } from "react";
 import theme from "./theme";
+import { AUTH_API_URL } from "../config/api";
 
 
-const API = "http://localhost:5000/api/auth";
+const API = AUTH_API_URL;
 const G   = "linear-gradient(135deg, rgb(148,0,211), rgb(237,128,233))";
 const gradText = {
   background: G,

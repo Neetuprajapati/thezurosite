@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CONTACT_API_URL } from "../config/api";
 
 // ── NO SETUP NEEDED — emails go directly via the user's email app ──────────
 // Change this to your email address where you want to receive messages
@@ -82,7 +83,7 @@ export default function ContactUs() {
     try {
   
       const response = await fetch(
-        "http://localhost:5000/api/contact/send-email",
+        `${CONTACT_API_URL}/send-email`,
         {
           method: "POST",
           headers: {

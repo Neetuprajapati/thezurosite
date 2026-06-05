@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import theme from "./theme";
+import { AUTH_API_URL } from "../config/api";
 
-const API = "http://localhost:5000/api/auth";
+const API = AUTH_API_URL;
 
 const TOKEN = {
   black:    "#0a0a0a",

@@ -86,7 +86,7 @@ import ProductDetails from "./pages/ProductDetails";
 import AboutUs        from "./pages/AboutUs.jsx";
 import CategoryPage   from "./pages/Categorypage.jsx";
 import CheckoutPage   from "./pages/checkoutflow.jsx";
-// import OrderSuccess   from "./pages/OrderSuccess.jsx";
+import OrderSuccess   from "./pages/OrderSuccess.jsx";
 
 // ── Protected Route — login nahi hai toh /login pe bhejo ─────────────────────
 function ProtectedRoute({ children }) {
@@ -127,16 +127,16 @@ export default function App() {
             <ProtectedRoute><ProfilePage /></ProtectedRoute>
           }/>
         
-          {/* <Route path="/bag" element={
+          <Route path="/bag" element={
             <ProtectedRoute><BagPage /></ProtectedRoute>
-          }/> */}
+          }/>
       
           <Route path="/track-orders" element={
             <ProtectedRoute><TrackOrders /></ProtectedRoute>
           }/>
-          {/* <Route path="/order-success" element={
+          <Route path="/order-success" element={
             <ProtectedRoute><OrderSuccess /></ProtectedRoute>
-          }/> */}
+          }/>
 
         </Route>
 

@@ -1,8 +1,8 @@
-import { image } from "framer-motion/client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config/api";
 
-const API = `${process.env.REACT_APP_API_URL}/api`;
+const API = API_URL;
 const getToken = () => localStorage.getItem("token");
 
 const StarIcon = () => (
@@ -118,7 +118,7 @@ export default function HomePage() {
   const [error, setError]             = useState(null);
   const [wishlistIds, setWishlistIds] = useState(new Set());
   const [sortBy, setSortBy]           = useState("Relevance");
-  const [priceRange, setPriceRange]   = useState(5000);
+  const [priceRange, setPriceRange]   = useState(Infinity);
   const [toast, setToast]             = useState(null);
   const [heroIdx, setHeroIdx]         = useState(0);
   const [heroAnim, setHeroAnim]       = useState(true);
@@ -229,7 +229,8 @@ export default function HomePage() {
   }, [navigate]);
 
   // ── filter + sort ──
-  let filtered = products.filter(p => (p.sale_price ?? p.base_price ?? 0) <= priceRange);
+  const maxPrice = products.length ? Math.max(...products.map(p => p.sale_price ?? p.base_price ?? 0), 5000) : 5000;
+  let filtered = priceRange === Infinity ? products : products.filter(p => (p.sale_price ?? p.base_price ?? 0) <= priceRange);
   if (sortBy === "Price: Low to High")
     filtered = [...filtered].sort((a, b) => (a.sale_price ?? a.base_price) - (b.sale_price ?? b.base_price));
   else if (sortBy === "Price: High to Low")

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ForgotPasswordPopup from "./ForgotPasswordPopup";
+import { AUTH_API_URL } from "../config/api";
 
-const API = "http://localhost:5000/api/auth";
+const API = AUTH_API_URL;
 
 // ── Gold color tokens ────────────────────────────────────────
 const GOLD       = "#C9A84C";
