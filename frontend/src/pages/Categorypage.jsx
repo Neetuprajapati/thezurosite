@@ -5,6 +5,15 @@ import { API_URL } from "../config/api";
 const API = API_URL;
 const getToken = () => localStorage.getItem("token");
 
+const normalizeCategoryKey = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 // ── Category config — name, slug, hero bg, headline ──────────────────────
 const CATEGORY_CONFIG = {
   men: {
@@ -15,6 +24,7 @@ const CATEGORY_CONFIG = {
     accent: "#c9a84c",
     emoji: "👔",
     apiCategory: "Men",
+    aliases: ["mens", "men s", "mens wear", "men wear"],
   },
   women: {
     name: "Women",
@@ -24,6 +34,7 @@ const CATEGORY_CONFIG = {
     accent: "#f5c6c6",
     emoji: "👗",
     apiCategory: "Women",
+    aliases: ["womens", "women s", "womens wear", "women wear"],
   },
   perfume: {
     name: "Perfume",
@@ -33,6 +44,7 @@ const CATEGORY_CONFIG = {
     accent: "#e8c5a0",
     emoji: "🌸",
     apiCategory: "Perfume",
+    aliases: ["perfumes", "fragrance", "fragrances"],
   },
   shoes: {
     name: "Shoes",
@@ -42,6 +54,7 @@ const CATEGORY_CONFIG = {
     accent: "#6ba3d6",
     emoji: "👟",
     apiCategory: "Shoes",
+    aliases: ["shoe", "footwear"],
   },
   "new-arrivals": {
     name: "New Arrivals",
@@ -51,6 +64,7 @@ const CATEGORY_CONFIG = {
     accent: "#a8c9a8",
     emoji: "✨",
     apiCategory: "New Arrivals",
+    aliases: ["new arrival", "newarrival", "new arrivals collection", "latest"],
   },
 };
 
@@ -114,14 +128,32 @@ export default function CategoryPage() {
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
         const all = Array.isArray(data) ? data : [];
-        console.log("🔍 API Products:", all);
-        console.log("🎯 Expected Category:", config?.apiCategory);
-        console.log("📊 Available Categories:", [...new Set(all.map(p => p.category))]);
-        // Filter by category name (case-insensitive)
-        const filtered = all.filter(p =>
-          p.category?.toLowerCase() === config?.apiCategory?.toLowerCase()
+        const targets = new Set(
+          [config?.apiCategory, ...(config?.aliases || [])].map(normalizeCategoryKey)
         );
-        console.log("✅ Filtered Products:", filtered);
+
+        const filtered = all.filter((p) => {
+          const rawCategory =
+            p?.category?.name ??
+            p?.category ??
+            p?.category_name ??
+            p?.product_category ??
+            "";
+
+          const productCategory = normalizeCategoryKey(rawCategory);
+          if (!productCategory) return false;
+          if (targets.has(productCategory)) return true;
+
+          for (const target of targets) {
+            if (!target) continue;
+            if (productCategory.includes(target) || target.includes(productCategory)) {
+              return true;
+            }
+          }
+
+          return false;
+        });
+
         setProducts(filtered);
         setLoading(false);
       })
