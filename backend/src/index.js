@@ -7,22 +7,39 @@ const app = express();
 // Prevent conditional GET 304 for API JSON responses.
 app.set("etag", false);
 
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:3000")
+const defaultAllowedOrigins = [
+  // "http://localhost:3000",
+  "https://thezuro.com",
+  "https://www.thezuro.com",
+];
+
+const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+const allowedOrigins = configuredOrigins.length ? configuredOrigins : defaultAllowedOrigins;
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
 app.use("/api/auth",     require("./routes/auth"));
