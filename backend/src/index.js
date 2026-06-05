@@ -7,18 +7,21 @@ const app = express();
 // Prevent conditional GET 304 for API JSON responses.
 app.set("etag", false);
 
+const normalizeOrigin = (value) => String(value || "").trim().replace(/\/$/, "").toLowerCase();
+
 const defaultAllowedOrigins = [
   // "http://localhost:3000",
   "https://thezuro.com",
   "https://www.thezuro.com",
-];
+].map(normalizeOrigin);
 
 const configuredOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
   .split(",")
-  .map((origin) => origin.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
-const allowedOrigins = configuredOrigins.length ? configuredOrigins : defaultAllowedOrigins;
+// Merge defaults with configured origins so one env value doesn't accidentally block another valid domain.
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...configuredOrigins]));
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -26,7 +29,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin);
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
 
